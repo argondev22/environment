@@ -6,13 +6,13 @@ on:
     paths:
       - '**/*.yml'
       - '**/*.yaml'
-      - 'infra/.yamllint'
+      - 'pc/.yamllint'
   pull_request:
     branches: [main]
     paths:
       - '**/*.yml'
       - '**/*.yaml'
-      - 'infra/.yamllint'
+      - 'pc/.yamllint'
   workflow_dispatch:
 
 jobs:
@@ -34,9 +34,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install yamllint
 
-      - name: Run YAML lint on infra directory
+      - name: Run YAML lint on pc directory
         run: yamllint .
-        working-directory: infra
+        working-directory: pc
 
       - name: Run YAML lint on config directory
         run: |

@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'infra/**'
+      - 'pc/**'
   pull_request:
     branches: [main]
     paths:
-      - 'infra/**'
+      - 'pc/**'
   workflow_dispatch:
 
 env:
@@ -42,13 +42,13 @@ jobs:
         run: |
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_pass
           chmod 600 .vault_pass
-        working-directory: infra
+        working-directory: pc
 
       - name: Run Ansible syntax check
         run: |
           ansible-playbook --syntax-check -i inventory.ini playbook.yml \
             --vault-password-file .vault_pass
-        working-directory: infra
+        working-directory: pc
 
       - name: Run playbook in check mode
         run: |
@@ -56,4 +56,4 @@ jobs:
             --vault-password-file .vault_pass
         env:
           SSH_AUTH_SOCK: ""
-        working-directory: infra
+        working-directory: pc

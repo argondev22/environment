@@ -273,7 +273,7 @@ sudo pacman -S ansible
 ```sh
 # リポジトリクローン
 git clone --recurse-submodules git@github.com:argon/environments.git
-cd environments/infra
+cd environments/pc
 ```
 
 ### 3. `.vault_pass`ファイルの配置
