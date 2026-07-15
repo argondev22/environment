@@ -11,31 +11,20 @@
       tool_versions: "{{ ansible_env.HOME }}/.tool-versions"
       brewfile: "{{ ansible_env.HOME }}/.Brewfile"
 
-    brew_configs:
-      Darwin_arm64: &darwin_arm
-        bin: "/opt/homebrew/bin"
-        prefix: "/opt/homebrew"
-        zsh: "/opt/homebrew/bin/zsh"
-      Darwin_aarch64: *darwin_arm
-      Darwin_x86_64: &darwin_intel
-        bin: "/usr/local/bin"
-        prefix: "/usr/local"
-        zsh: "/usr/local/bin/zsh"
-      Darwin_i386: *darwin_intel
-      Debian_default: &linux_brew
-        bin: "/home/linuxbrew/.linuxbrew/bin"
-        prefix: "/home/linuxbrew/.linuxbrew"
-        zsh: "/home/linuxbrew/.linuxbrew/bin/zsh"
-
   pre_tasks:
-    - name: Set platform-specific configuration
-      set_fact:
-        brew: "{{ brew_configs[ansible_facts.os_family + '_' + ansible_facts.machine] | default(brew_configs[ansible_facts.os_family + '_default']) | default({}) }}"
-
-    - name: Validate platform support
+    - name: Require macOS
       fail:
-        msg: "Unsupported platform: {{ ansible_facts.os_family }}/{{ ansible_facts.machine }}"
-      when: brew == {}
+        msg: "This playbook supports macOS only (detected {{ ansible_facts.os_family }}/{{ ansible_facts.machine }})"
+      when: ansible_facts.os_family != "Darwin"
+
+    - name: Set Homebrew paths (arm64 -> /opt/homebrew, intel -> /usr/local)
+      set_fact:
+        brew:
+          bin: "{{ brew_prefix }}/bin"
+          prefix: "{{ brew_prefix }}"
+          zsh: "{{ brew_prefix }}/bin/zsh"
+      vars:
+        brew_prefix: "{{ '/opt/homebrew' if ansible_facts.machine == 'arm64' else '/usr/local' }}"
 
     - name: Set asdf configuration
       set_fact:
@@ -56,21 +45,6 @@
           changed_when: false
           failed_when: false
 
-        - name: Prepare Linuxbrew directories (Debian)
-          file:
-            path: "{{ item }}"
-            state: directory
-            mode: '0755'
-            owner: "{{ ansible_user_id }}"
-            group: "{{ ansible_user_id }}"
-          become: true
-          loop:
-            - /home/linuxbrew
-            - /home/linuxbrew/.linuxbrew
-          when:
-            - brew_check.rc != 0
-            - ansible_facts.os_family == "Debian"
-
         - name: Install Homebrew
           shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           when: brew_check.rc != 0
@@ -79,35 +53,10 @@
             HOME: "{{ paths.home }}"
             USER: "{{ ansible_user_id }}"
 
-        - name: Install core dependencies (Debian)
-          apt:
-            name:
-              - build-essential
-              - unzip
-              - curl
-              - wget
-              - git
-              - gnupg
-              - dirmngr
-              - ca-certificates
-              - software-properties-common
-              - libssl-dev
-              - libffi-dev
-              - zlib1g-dev
-              - libbz2-dev
-              - libreadline-dev
-              - libsqlite3-dev
-              - xz-utils
-            update_cache: true
-            state: present
-          become: true
-          when: ansible_facts.os_family == "Debian"
-
-        - name: Install core dependencies (macOS)
+        - name: Install core dependencies
           community.general.homebrew:
             name: [unzip, gnupg]
             state: present
-          when: ansible_facts.os_family == "Darwin"
 
         - name: Install main packages
           community.general.homebrew:

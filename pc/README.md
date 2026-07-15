@@ -14,7 +14,7 @@
 ## 主なコンポーネント
 
 - **[Ansible](https://www.ansible.com/)**: 構成管理
-- **[Homebrew](https://brew.sh/)/[Linuxbrew](https://docs.brew.sh/Homebrew-on-Linux)**: パッケージ管理の統一
+- **[Homebrew](https://brew.sh/)**: パッケージ管理
 - **[asdf](https://asdf-vm.com/)**: 各ツールおよびバージョンを統一管理
 - **[chezmoi](https://www.chezmoi.io/)**: dotfile の管理
 - **[zsh](https://www.zsh.org/)**: デフォルトシェル
@@ -32,8 +32,6 @@
 |-----------------|---------------------------|----------|
 | macOS           | Apple Silicon (M1/M2/M3)  | ✅       |
 | macOS           | Intel x64                 | ✅       |
-| Ubuntu 20.04+   | x64                       | ✅       |
-| WSL2 (Ubuntu)   | x64                       | ✅       |
 
 ## 運用ルール
 
@@ -47,7 +45,7 @@
 #### パッケージ/ツール
 
 - 原則 asdf で管理
-- asdf で管理できないパッケージ/ツールは homebrew(Linuxbrew) で管理
+- asdf で管理できないパッケージ/ツールは homebrew で管理
 - 上記で対応できない場合は、[`bin/`](bin/) にカスタムのインストールスクリプトを作成
 
 **概略図**:
@@ -139,7 +137,7 @@ ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
 ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass --ask-become-pass
 ```
 
-#### Homebrew (macOS) / Linuxbrew
+#### Homebrew
 
 1. ローカルマシンにパッケージをインストール
 
@@ -256,14 +254,7 @@ git submodule update --remote --merge
 ### 1. Ansible のインストール
 
 ```sh
-# macOS
 brew install ansible
-
-# Ubuntu/Debian/WSL
-sudo apt update && sudo apt install -y ansible
-
-# Arch Linux
-sudo pacman -S ansible
 ```
 
 ※ Ansible は Python で動作するため、Python のインタプリタがインストールされている必要がある。　
