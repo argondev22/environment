@@ -1,3 +1,3 @@
 [submodule "dotfiles"]
 	path = dotfiles
-	url = git@github.com:argon-dev22/dotfiles.git
+	url = git@github.com:argondev22/dotfiles.git
