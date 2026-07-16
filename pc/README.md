@@ -80,92 +80,91 @@ brew
 
 1. 編集して適用する
 
-  ```sh
-  chezmoi edit --apply .your-dotfile # ソースの dot_your-dotfile を編集し、~/ まで反映
-  ```
+   ```sh
+   chezmoi edit --apply .your-dotfile # ソースの dot_your-dotfile を編集し、~/ まで反映
+   ```
 
-  ※ 直接 `~/.your-dotfile` を編集しないこと
+   ※ 直接 `~/.your-dotfile` を編集しないこと
 
 2. push する
 
-  ```sh
-  chezmoi git add .
-  chezmoi git commit -m "コミットメッセージ"
-  chezmoi git push origin main
-  ```
+   ```sh
+   chezmoi git add .
+   chezmoi git commit -m "コミットメッセージ"
+   chezmoi git push origin main
+   ```
 
 3. 他のマシンへ同期する
 
-  ```sh
-  chezmoi update
-  chezmoi apply
-  ```
+   ```sh
+   chezmoi update
+   ```
 
 #### asdf
 
 1. `.tool-versions` を編集して適用する
 
-  ```sh
-  chezmoi edit --apply .tool-versions # 例: terraform 1.10.3 を追記
-  ```
+   ```sh
+   chezmoi edit --apply .tool-versions # 例: terraform 1.10.3 を追記
+   ```
 
-  ※ 直接 `~/.tool-versions` を編集しないこと
+   ※ 直接 `~/.tool-versions` を編集しないこと
 
 2. 実機にインストールする
 
-  ```sh
-  asdf plugin add terraform # 新規プラグインのときだけ
-  asdf install              # .tool-versions を読んで入れる
-  ```
+   ```sh
+   asdf plugin add terraform # 新規プラグインのときだけ
+   asdf install              # .tool-versions を読んで入れる
+   ```
 
 3. push する
 
-  ```sh
-  chezmoi git add .
-  chezmoi git commit -m "コミットメッセージ"
-  chezmoi git push origin main
-  ```
+   ```sh
+   chezmoi git add .
+   chezmoi git commit -m "コミットメッセージ"
+   chezmoi git push origin main
+   ```
 
 4. 他のマシンへ同期する
 
-  ```sh
-  chezmoi update
-  asdf install # 新規プラグインがあれば asdf plugin add も
-  ```
+   ```sh
+   chezmoi update
+   asdf install # 新規プラグインがあれば asdf plugin add も
+   ```
 
 #### Homebrew
 
 1. `.Brewfile` を編集して適用する
 
-  ```sh
-  chezmoi edit --apply .Brewfile # 例: brew "ripgrep" を追記
-  ```
+   ```sh
+   chezmoi edit --apply .Brewfile # 例: brew "ripgrep" を追記
+   ```
 
-  ※ `brew install` は使わない（Brewfile を唯一の真実とし、二重管理・ドリフトを避ける）
-  ※ 直接 `~/.Brewfile` を編集しないこと
+   ※ `brew install` は使わない（Brewfile を唯一の真実とし、二重管理・ドリフトを避ける）
+   ※ 直接 `~/.Brewfile` を編集しないこと
 
 2. 実機にインストールする
 
-  ```sh
-  brew bundle --file=~/.Brewfile
-  # Brewfile から削除したものを実機からも消す場合（確認後 --force）:
-  brew bundle cleanup --file=~/.Brewfile
-  ```
+   ```sh
+   brew bundle --file=~/.Brewfile
+   # Brewfile から削除したものを実機からも消す場合（確認後 --force）:
+   brew bundle cleanup --file=~/.Brewfile
+   ```
 
 3. push する
 
-  ```sh
-  chezmoi git add .
-  chezmoi git commit -m "コミットメッセージ"
-  chezmoi git push origin main
-  ```
+   ```sh
+   chezmoi git add .
+   chezmoi git commit -m "コミットメッセージ"
+   chezmoi git push origin main
+   ```
 
 4. 他のマシンへ同期する
 
-  ```sh
-  chezmoi update
-  brew bundle --file=~/.Brewfile
-  ```
+   ```sh
+   chezmoi update
+   brew bundle --file=~/.Brewfile
+   ```
 
 ## 注意事項
 
