@@ -13,7 +13,7 @@
 
 ## 主なコンポーネント
 
-- **[Ansible](https://www.ansible.com/)**: 構成管理
+- **[Ansible](https://www.ansible.com/)**: 構成管理（初期構築・全体リコンサイル）
 - **[Homebrew](https://brew.sh/)**: パッケージ管理
 - **[asdf](https://asdf-vm.com/)**: 各ツールおよびバージョンを統一管理
 - **[chezmoi](https://www.chezmoi.io/)**: dotfile の管理
@@ -66,123 +66,117 @@ brew
 
 - chezmoi で全て管理
 
+### playbook（`make apply`）の位置づけ
+
+`playbook.yml` は **新しいマシンの初期構築** と、**実機を宣言状態へ揃え直す全体リコンサイル**（任意）に使う。冪等なのでいつ実行しても安全。
+
+一方、**日々のパッケージ/dotfiles の追加・変更に playbook は不要**。各ツール（chezmoi / asdf / Homebrew）のネイティブコマンドで完結する（下記「運用フロー」）。
+
 ### 運用フロー
+
+いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles/asdf/Brewfile は chezmoi のソース（`~/.local/share/chezmoi/`）を「唯一の真実」とし、`~/` 配下は直接編集しない。
 
 #### dotfiles（chezmoi）
 
-1. `dot_your-dotfiles` を編集する
+1. 編集して適用する
 
-```sh
-chezmoi edit .your-dotfiles # あるいは ~/.local/share/chezmoi 配下の dot_your-dotfiles を編集
-```
+  ```sh
+  chezmoi edit --apply .your-dotfile # ソースの dot_your-dotfile を編集し、~/ まで反映
+  ```
 
-※ 直接 `~/.your-dotefiles` を編集しないこと
+  ※ 直接 `~/.your-dotfile` を編集しないこと
 
-2. ローカルマシンに反映させる
+2. push する
 
-```sh
-chezmoi apply
-```
+  ```sh
+  chezmoi git add .
+  chezmoi git commit -m "コミットメッセージ"
+  chezmoi git push origin main
+  ```
 
-3. 変更をリモートリポジトリにプッシュ
+3. 他のマシンへ同期する
 
-```sh
-chezmoi git add .
-chezmoi git commit -m "コミットメッセージ"
-chezmoi git push origin main
-```
-
-4. 他のマシンへ同期する
-
-```sh
-chezmoi update
-```
-
+  ```sh
+  chezmoi update
+  ```
 
 #### asdf
 
-1. [`dot_tool-versions`](../dotfiles/dot_tool-versions) を編集する
+1. `.tool-versions` を編集して適用する
 
-```sh
-chezmoi edit .tool-versions # あるいは ~/.local/share/chezmoi 配下の dot_tool-versions を編集
-```
+  ```sh
+  chezmoi edit --apply .tool-versions # 例: terraform 1.10.3 を追記
+  ```
 
-※ 直接 `~/.zshrc` を編集しないこと
+  ※ 直接 `~/.tool-versions` を編集しないこと
 
-2. ローカルマシンに反映させる
+2. 実機にインストールする
 
-```sh
-## sudoパスワードなし環境
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
-## sudoパスワードあり環境（実行時にパスワードを入力）
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass --ask-become-pass
-```
+  ```sh
+  asdf plugin add terraform # 新規プラグインのときだけ
+  asdf install              # .tool-versions を読んで入れる
+  ```
 
-3. 変更をリモートリポジトリにプッシュ
+3. push する
 
-```sh
-chezmoi git add .
-chezmoi git commit -m "コミットメッセージ"
-chezmoi git push origin main
-```
+  ```sh
+  chezmoi git add .
+  chezmoi git commit -m "コミットメッセージ"
+  chezmoi git push origin main
+  ```
 
 4. 他のマシンへ同期する
 
-```sh
-chezmoi update
-
-## sudoパスワードなし環境
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
-## sudoパスワードあり環境（実行時にパスワードを入力）
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass --ask-become-pass
-```
+  ```sh
+  chezmoi update
+  asdf install # 新規プラグインがあれば asdf plugin add も
+  ```
 
 #### Homebrew
 
-1. [`dot_Brewfile`](../dotfiles/dot_Brewfile) にパッケージを追記し、このマシンに適用する
+1. `.Brewfile` を編集して適用する
 
-```sh
-chezmoi edit --apply .Brewfile # 例: brew "ripgrep" を追記して保存（~/.Brewfile まで反映される）
-```
+  ```sh
+  chezmoi edit --apply .Brewfile # 例: brew "ripgrep" を追記
+  ```
 
-※ `brew install` は使わない（Brewfile を唯一の真実とし、二重管理・ドリフトを避ける）
-※ 直接 `~/.Brewfile` を編集しないこと
+  ※ `brew install` は使わない（Brewfile を唯一の真実とし、二重管理・ドリフトを避ける）
+  ※ 直接 `~/.Brewfile` を編集しないこと
 
-2. Brewfile の内容を実機にインストールする
+2. 実機にインストールする
 
-```sh
-brew bundle --file=~/.Brewfile
-# Brewfile から削除したパッケージを実機からも消す場合（確認後 --force）:
-brew bundle cleanup --file=~/.Brewfile
-```
+  ```sh
+  brew bundle --file=~/.Brewfile
+  # Brewfile から削除したものを実機からも消す場合（確認後 --force）:
+  brew bundle cleanup --file=~/.Brewfile
+  ```
 
-3. 変更をリモートリポジトリにプッシュ
+3. push する
 
-```sh
-chezmoi git add .Brewfile
-chezmoi git commit -m "コミットメッセージ"
-chezmoi git push origin main
-```
+  ```sh
+  chezmoi git add .
+  chezmoi git commit -m "コミットメッセージ"
+  chezmoi git push origin main
+  ```
 
 4. 他のマシンへ同期する
 
-```sh
-chezmoi update # 最新の .Brewfile を取得して適用
-brew bundle --file=~/.Brewfile
-```
-
+  ```sh
+  chezmoi update
+  brew bundle --file=~/.Brewfile
+  ```
 
 ## 注意事項
 
-- ホームディレクトリ配下の dotfiles を直接修正しない。dotfiles を修正する際は必ず ~/.local/share/chezmoi/ 配下を修正し、`chezmoi apply` コマンドで反映させる。
+- ホームディレクトリ配下の dotfiles を直接修正しない。修正する際は必ず `~/.local/share/chezmoi/` 配下を修正し、`chezmoi apply`（または `chezmoi edit --apply`）で反映させる。
 - 機密情報を平文のままリモートリポジトリにプッシュしない。chezmoi や ansible の暗号化機能を活用する。
-- playbook.yml の追加実装や修正を行う際は、`make check` コマンドでテスト・デバッグを行いながら進める（いきなり `make apply` を行わない）。ただし、`make check` と `make apply` で一部、挙動が変化してしまうため、`make apply` でないと確認できないタスクも存在する。
+- playbook.yml の追加実装や修正を行う際は、`make check` でテスト・デバッグしながら進める（いきなり `make apply` を行わない）。ただし `make check` と `make apply` で一部挙動が変わるため、`make apply` でないと確認できないタスクも存在する。
 
 ## トラブルシューティング
 
 ### ansible
 
-- **Register zsh in /etc/shells タスクで実行が停止しまう**:</br>
+- **Register zsh in /etc/shells タスクで実行が停止してしまう**:</br>
     管理者権限昇格に必要なパスワード（`--ask-become-pass`）が正しいかどうか確認する
 
 ### chezmoi
@@ -204,26 +198,26 @@ brew bundle --file=~/.Brewfile
     echo $SHELL
     ```
 
-## よく用いるコマンド
+## よく用いるコマンド集
 
 ### asdf
 
 ```sh
-# .tool-versions を編集
-echo "terraform 1.10.3" >> ~/.tool-versions
+# .tool-versions を編集（ソース経由）
+chezmoi edit --apply .tool-versions
 
 # プラグインを追加
 asdf plugin add terraform
 
-# ツールをインストール
-asdf install terraform 1.10.3
+# ツールをインストール（.tool-versions を読む）
+asdf install
 ```
 
 ### chezmoi
 
 ```sh
 # 新しい dotfiles を追加
-chezmoi add ~/.tool-verions
+chezmoi add ~/.tool-versions
 
 # 機密性の高い dotfiles を追加
 chezmoi add --encrypt ~/.aws/credentials
@@ -233,6 +227,16 @@ chezmoi apply
 
 # リモートリポジトリから最新の変更を取得して適用
 chezmoi update
+```
+
+### Homebrew
+
+```sh
+# Brewfile の内容を実機に反映
+brew bundle --file=~/.Brewfile
+
+# Brewfile に無いものを実機から削除（確認後 --force）
+brew bundle cleanup --file=~/.Brewfile
 ```
 
 ### Git Submodule
@@ -257,7 +261,7 @@ git submodule update --remote --merge
 brew install ansible
 ```
 
-※ Ansible は Python で動作するため、Python のインタプリタがインストールされている必要がある。　
+※ Ansible は Python で動作するため、Python のインタプリタがインストールされている必要がある。
 
 ### 2. 環境の準備
 
@@ -296,8 +300,7 @@ source ~/.zprofile
 
 # 各ツールの確認
 chezmoi status          # dotfiles状態
-asdf current           # インストール済みパッケージ/ツール
-echo $SHELL            # デフォルトシェル
+asdf current            # インストール済みパッケージ/ツール
+echo $SHELL             # デフォルトシェル
 age-keygen -y ~/.config/age/age.key  # age公開鍵
 ```
-
