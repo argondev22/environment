@@ -44,9 +44,9 @@
 
 #### パッケージ/ツール
 
-- 原則 asdf で管理
-- asdf で管理できないパッケージ/ツールは homebrew で管理
-- 上記で対応できない場合は、[`bin/`](bin/) にカスタムのインストールスクリプトを作成
+1. 原則 asdf で管理
+2. asdf で管理できないパッケージ/ツールは homebrew で管理
+3. 上記で対応できない場合は、[`bin/`](bin/) にカスタムのインストールスクリプトを作成
 
 **概略図**:
 
@@ -56,10 +56,10 @@
 
 brew
 ├── asdf
-|	└── .tool-versions # 原則ここで管理
-└── ... # asdf が対応していないパッケージは brew で管理
+|	└── .tool-versions # 1. 原則ここで管理
+└── ... # 2. asdf が対応していないパッケージは brew で管理
 
-(カスタムスクリプト) # 上記で対応できない場合は、カスタムスクリプトを作成
+(カスタムスクリプト) # 3. 上記で対応できない場合は、カスタムスクリプトを作成
 ```
 
 #### dotfiles
@@ -92,7 +92,7 @@ chezmoi git commit -m "コミットメッセージ"
 chezmoi git push origin main
 ```
 
-4. 別のマシンでも反映させる
+4. 他のマシンへ同期する
 
 ```sh
 chezmoi update
@@ -126,7 +126,7 @@ chezmoi git commit -m "コミットメッセージ"
 chezmoi git push origin main
 ```
 
-4. 別のマシンでも反映させる
+4. 他のマシンへ同期する
 
 ```sh
 chezmoi update
@@ -139,36 +139,36 @@ ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
 
 #### Homebrew
 
-1. ローカルマシンにパッケージをインストール
+1. [`dot_Brewfile`](../dotfiles/dot_Brewfile) にパッケージを追記し、このマシンに適用する
 
 ```sh
-brew install <package-name>
+chezmoi edit --apply .Brewfile # 例: brew "ripgrep" を追記して保存（~/.Brewfile まで反映される）
 ```
 
-2. [dot_Brewfile](../dotfiles/dot_Brewfile) を編集する
-
-```sh
-chezmoi edit .Brewfile # あるいは ~/.local/share/chezmoi 配下の dot_Brewfile を編集
-```
-
+※ `brew install` は使わない（Brewfile を唯一の真実とし、二重管理・ドリフトを避ける）
 ※ 直接 `~/.Brewfile` を編集しないこと
+
+2. Brewfile の内容を実機にインストールする
+
+```sh
+brew bundle --file=~/.Brewfile
+# Brewfile から削除したパッケージを実機からも消す場合（確認後 --force）:
+brew bundle cleanup --file=~/.Brewfile
+```
 
 3. 変更をリモートリポジトリにプッシュ
 
 ```sh
-git add .
-git commit -m "コミットメッセージ"
-git push origin main
+chezmoi git add .Brewfile
+chezmoi git commit -m "コミットメッセージ"
+chezmoi git push origin main
 ```
 
-4. 別のマシンでも反映させる
-```sh
-git pull origin main
+4. 他のマシンへ同期する
 
-## sudoパスワードなし環境
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
-## sudoパスワードあり環境（実行時にパスワードを入力）
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass --ask-become-pass
+```sh
+chezmoi update # 最新の .Brewfile を取得して適用
+brew bundle --file=~/.Brewfile
 ```
 
 
@@ -263,8 +263,8 @@ brew install ansible
 
 ```sh
 # リポジトリクローン
-git clone --recurse-submodules git@github.com:argon/environments.git
-cd environments/pc
+git clone --recurse-submodules git@github.com:argondev22/environment.git
+cd environment/pc
 ```
 
 ### 3. `.vault_pass`ファイルの配置
