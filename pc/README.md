@@ -98,6 +98,7 @@ brew
 
   ```sh
   chezmoi update
+  chezmoi apply
   ```
 
 #### asdf
@@ -203,9 +204,6 @@ brew
 ### asdf
 
 ```sh
-# .tool-versions を編集（ソース経由）
-chezmoi edit --apply .tool-versions
-
 # プラグインを追加
 asdf plugin add terraform
 
@@ -221,6 +219,9 @@ chezmoi add ~/.tool-versions
 
 # 機密性の高い dotfiles を追加
 chezmoi add --encrypt ~/.aws/credentials
+
+# .your-dotfile を編集して変更を適用
+chezmoi edit --apply .your-dotfile
 
 # 変更を適用
 chezmoi apply
