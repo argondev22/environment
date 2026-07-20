@@ -7,7 +7,7 @@ PCの環境のIaCや各種設定ファイルをまとめたリポジトリ。
 ```text
 environments/
 ├── config/      # 設定ファイル
-├── dotfiles/    # dotfiles（サブモジュール）
+├── homedir/     # dotfiles（サブモジュール）
 ├── pc/          # Ansible
 ├── README.md    # 本ファイル
 └── ...
