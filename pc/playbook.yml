@@ -89,9 +89,9 @@
           become: true
 
     # ---------------------------------------------------------------
-    # dotfiles (age + chezmoi)
+    # homedir (age + chezmoi)
     # ---------------------------------------------------------------
-    - name: Setup dotfiles
+    - name: Setup homedir
       environment:
         AGE_IDENTITIES_FILE: "{{ paths.age_key }}"
       block:
@@ -144,7 +144,7 @@
           changed_when: "'Already up to date.' not in git_pull.stdout"
           when: repo_exists.stat.exists
 
-        - name: Apply dotfiles
+        - name: Apply homedir
           command: "{{ brew.bin }}/chezmoi apply"
           register: chezmoi_apply
           changed_when: false
@@ -266,7 +266,7 @@
           changed_when: false
           failed_when: false
 
-        - name: Collect dotfiles status
+        - name: Collect homedir status
           command: "{{ brew.bin }}/chezmoi status"
           register: sum_chezmoi
           changed_when: false
@@ -289,7 +289,7 @@
               - "Homebrew      : {{ 'OK' if sum_brew.rc == 0 else 'FAILED' }} ({{ brew.bin }})"
               - "Default shell : {{ brew.zsh }}"
               - "Brewfile      : {{ 'applied' if brewfile_check.stat.exists else 'not found (skipped)' }}"
-              - "Dotfiles      : {{ 'clean' if (sum_chezmoi.stdout | default('')) == '' else 'PENDING CHANGES ↓' }}"
+              - "Homedir       : {{ 'clean' if (sum_chezmoi.stdout | default('')) == '' else 'PENDING CHANGES ↓' }}"
               - "{{ sum_chezmoi.stdout_lines | default([]) }}"
               - "asdf tools    :"
               - "{{ sum_asdf.stdout_lines | default(['(.tool-versions not found)']) }}"

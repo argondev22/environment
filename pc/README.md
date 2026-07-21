@@ -38,7 +38,7 @@
 ### 管理対象
 
 - パッケージ/ツール
-- dotfiles
+- homedir
 
 ### 管理方針
 
@@ -62,7 +62,7 @@ brew
 (カスタムスクリプト) # 3. 上記で対応できない場合は、カスタムスクリプトを作成
 ```
 
-#### dotfiles
+#### homedir
 
 - chezmoi で全て管理
 
@@ -76,7 +76,7 @@ brew
 
 いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles/asdf/Brewfile は chezmoi のソース（`~/.local/share/chezmoi/`）を「唯一の真実」とし、`~/` 配下は直接編集しない。
 
-#### dotfiles（chezmoi）
+#### homedir（chezmoi）
 
 1. 編集して適用する
 
@@ -281,15 +281,19 @@ git submodule update --remote --merge
 
 ### 0. 前提条件
 
+- GitHub に SSH 公開鍵を登録済みで、このリポジトリ（サブモジュール含む）を SSH でクローンできること。
 - Python インタプリタがインストールされていること（[Ansible のインストール](#1-ansible-のインストール)で必要）。
 
 ### 1. Ansible のインストール
 
 ```sh
-brew install ansible
+python3 -m pip install --user pipx   # pipx が未導入の場合
+python3 -m pipx ensurepath           # pipx / ansible に PATH を通す（新しいシェルで有効化）
+pipx install ansible                 # フル版（playbook が使う community.general を含む）
 ```
 
-※ Ansible は Python で動作するため、Python のインタプリタがインストールされている必要がある。
+※ `ansible-core` ではなく **`ansible`（フル）** を入れる（playbook が `community.general.homebrew` モジュールを使うため）。
+※ macOS / Python のバージョンにより挙動が変わりうる（`externally-managed-environment` 等）。初回は実機で通ることを確認すること。
 
 ### 2. 環境の準備
 
@@ -327,7 +331,7 @@ ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
 source ~/.zprofile
 
 # 各ツールの確認
-chezmoi status          # dotfiles状態
+chezmoi status          # homedir状態
 asdf current            # インストール済みパッケージ/ツール
 echo $SHELL             # デフォルトシェル
 age-keygen -y ~/.config/age/age.key  # age公開鍵
