@@ -200,6 +200,28 @@ brew
 
 ## よく用いるコマンド集
 
+### Ansible
+
+```sh
+# ~/Environment/pc/ で実行（Makefile 経由）。
+# check / apply / debug は .vault_pass が必要で、実行時に sudo パスワードを聞かれる。
+
+# 構文チェック
+make syntax
+
+# ドライラン（差分表示のみ・実機は変更しない）
+make check
+
+# 本実行（環境を構築・更新）
+make apply
+
+# 詳細ログ付きドライラン（トラブル調査用・-vvv）
+make debug
+
+# .vault_pass を削除
+make clean
+```
+
 ### asdf
 
 ```sh
