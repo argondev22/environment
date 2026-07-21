@@ -203,23 +203,29 @@ brew
 ### Ansible
 
 ```sh
-# ~/Environment/pc/ で実行（Makefile 経由）。
-# check / apply / debug は .vault_pass が必要で、実行時に sudo パスワードを聞かれる。
+# すべて ~/Environment/pc/ で実行
+
+# 暗号化した変数ファイルを編集（例: chezmoi_repo_url を変更）
+ansible-vault edit group_vars/all.yml
+
+# 暗号化ファイルの中身を閲覧（編集しない）
+ansible-vault view group_vars/all.yml
+
+# ファイルを暗号化 / 復号
+ansible-vault encrypt group_vars/all.yml
+ansible-vault decrypt group_vars/all.yml
+
+# vault パスワードを変更
+ansible-vault rekey group_vars/all.yml
 
 # 構文チェック
-make syntax
+ansible-playbook --syntax-check -i inventory.ini playbook.yml
 
 # ドライラン（差分表示のみ・実機は変更しない）
-make check
+ansible-playbook -i inventory.ini playbook.yml --check --diff --ask-vault-pass --ask-become-pass
 
 # 本実行（環境を構築・更新）
-make apply
-
-# 詳細ログ付きドライラン（トラブル調査用・-vvv）
-make debug
-
-# .vault_pass を削除
-make clean
+ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass --ask-become-pass
 ```
 
 ### asdf
