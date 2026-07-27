@@ -49,6 +49,10 @@ Temporary Items
 # iCloud generated files
 *.icloud
 
+### Claude Code ###
+# 個人のローカル権限設定。プロジェクト共有の設定は .claude/settings.json 側に置く
+.claude/settings.local.json
+
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db

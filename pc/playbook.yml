@@ -95,6 +95,24 @@
       environment:
         AGE_IDENTITIES_FILE: "{{ paths.age_key }}"
       block:
+        - name: Ensure ~/.ssh exists
+          file:
+            path: "{{ paths.home }}/.ssh"
+            state: directory
+            mode: '0700'
+
+        # chezmoi init と、.chezmoiexternal.toml の git-repo (Vault/Memory) は
+        # SSH (git@github.com:...) を使う。github.com の鍵が known_hosts に
+        # 無いと初回接続で TOFU 確認("yes/no")が入るが、command モジュール経由
+        # では stdin が繋がらず応答できず失敗する。事前に信頼しておくことで
+        # 対話プロンプトの発生自体を無くす。
+        - name: Trust GitHub's SSH host key
+          ansible.builtin.known_hosts:
+            name: github.com
+            key: "{{ lookup('pipe', 'ssh-keyscan -t ed25519,rsa github.com 2>/dev/null') }}"
+            path: "{{ paths.home }}/.ssh/known_hosts"
+            state: present
+
         - name: Create config directories
           file:
             path: "{{ item.path }}"
@@ -228,7 +246,13 @@
       when: brewfile_check.stat.exists
 
     # ---------------------------------------------------------------
-    # 宣言化しづらいものは bin/*.sh に委譲（各スクリプトが冪等前提）
+    # 宣言化しづらいものは bin/*.sh に委譲（各スクリプトが冪等前提・非対話前提）
+    #
+    # 対話確認が必要なスクリプト（例: npx の確認プロンプトに答えたいもの）は
+    # bin/manual/ に置く。Ansible の command/shell タスクは stdin が繋がらず
+    # 対話プロンプトに答えられないため、bin/ 直下（非再帰探索）には置かない。
+    # bin/manual/ 配下はこの playbook からは実行せず、オペレーターが自分の
+    # 端末で直接実行する（bootstrap スキルが案内する）。
     # ---------------------------------------------------------------
     - name: Run custom install scripts (bin/*.sh)
       block:

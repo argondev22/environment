@@ -47,6 +47,8 @@
 1. 原則 asdf で管理
 2. asdf で管理できないパッケージ/ツールは homebrew で管理
 3. 上記で対応できない場合は、[`bin/`](bin/) にカスタムのインストールスクリプトを作成
+   - `bin/` 直下: playbook が自動実行する。**冪等かつ非対話**が前提（確認プロンプトを出すコマンドを置かない）。
+   - `bin/manual/`: 対話確認が必要なスクリプトはここに置く。playbook からは実行されず、オペレーターが自分の端末で直接実行する（`bootstrap` スキルが実行タイミングを案内する）。
 
 **概略図**:
 
@@ -282,7 +284,9 @@ git submodule update --remote --merge
 ### 0. 前提条件
 
 - GitHub に SSH 公開鍵を登録済みで、このリポジトリ（サブモジュール含む）を SSH でクローンできること。
-- Python インタプリタがインストールされていること（[Ansible のインストール](#1-ansible-のインストール)で必要）。
+  - ※ この手順を経ることで GitHub の SSH ホスト鍵が `~/.ssh/known_hosts` に登録される。これが無い状態で `chezmoi init`/`chezmoi apply`（`.chezmoiexternal.toml` の Vault/Memory clone を含む）が自動実行されると、初回接続の鍵確認プロンプトに応答できず失敗しうる（playbook 側でも `known_hosts` タスクとして担保しているが、根本はこの手動クローンで解消される）。
+- Xcode Command Line Tools がインストール済みであること（`xcode-select -p` で確認）。未導入の場合、`ansible_python_interpreter` が指す `/usr/bin/python3` の初回起動時に GUI のインストールダイアログが出る。これは ansible の gather_facts より前に起きるため、自動化では検知・応答できない。無ければ `xcode-select --install` を先に実行しておく。
+- Python インタプリタがインストールされていること（[Ansible のインストール](#1-ansible-のインストール)で必要。上記 Xcode Command Line Tools を導入すれば通常はこれも揃う）。
 
 ### 1. Ansible のインストール
 
