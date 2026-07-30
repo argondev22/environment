@@ -15,8 +15,8 @@
 
 set -e
 
-# grill-me: プラン/設計を徹底的に問い詰めてくれるスキル
-npx skills add mattpocock/skills --skill grill-me -g -a claude-code
-
-# find-skills: スキルを検索・発見するためのスキル
+# https://www.skills.sh/mattpocock/skills
 npx skills add vercel-labs/skills --skill find-skills -g -a claude-code
+
+# https://www.skills.sh/mattpocock/skills/grill-me
+npx skills add mattpocock/skills --skill grill-me -g -a claude-code
