@@ -1,3 +1,6 @@
 [submodule "homedir"]
 	path = homedir
 	url = git@github.com:argondev22/homedir.git
+[submodule "claude-plugins"]
+	path = claude-plugins
+	url = git@github.com:argondev22/claude-plugins.git
