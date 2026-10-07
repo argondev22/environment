@@ -1,20 +1,22 @@
 ---
 name: bootstrap
 description: このリポジトリ(Environment)の pc/ にある Ansible playbook（Homebrew / asdf / chezmoi / zsh のマシンセットアップ）を、前提チェック → dry-run → 本実行 → 事後確認までまとめて進める。vault パスワードや sudo 認証など対話で答えられない秘密情報はチャット上で扱わず、欠けていれば安全に停止して案内する。「初期セットアップして」「playbook実行して」「マシンをセットアップし直して」「環境を最新状態に揃えて」「bootstrap」などで起動。
-argument-hint: "[check|apply]（省略時は check → 差分確認の上オペレーターに続行可否を尋ねてから apply）"
-user-invocable: true
 disable-model-invocation: true
-allowed-tools: Bash(uname *), Bash(xcode-select *), Bash(ansible --version), Bash(ansible-playbook *), Bash(sudo -n *), Bash(sudo -v), Bash(chezmoi *), Bash(asdf *), Bash(age-keygen *), Bash(dscl *), Bash(brew bundle check *), Bash(bash .claude/skills/bootstrap/scripts/verify.sh), Bash(echo *), Bash(test *), Bash(ls *), Bash(find *), Bash(cat pc/.vault_pass)
 ---
 
 # bootstrap — マシンセットアップ(Ansible playbook)の実行
 
 `pc/playbook.yml` を安全に実行し、新しいマシンの初期構築・既存マシンの宣言状態への揃え直しを行う。
-このスキルはこのリポジトリ(Environment)専用のプロジェクトスキル。仕様の正は常に `pc/README.md` と `pc/playbook.yml` そのもの。この SKILL.md と食い違う場合は実物を優先する。
+このスキルはこのリポジトリ(Environment)専用のプロジェクトスキル。
+
+**オペレーターが明示的に呼んだときだけ実行する。会話の流れから自動で実行しない。**
+
+実行してよいのは、本文の手順に出てくる読み取り系の確認コマンド（`uname` / `xcode-select -p` / `ansible --version` / `test` / `sudo -n true` / `chezmoi` / `asdf` / `dscl` / `brew bundle check` / `find` / `ls` と `verify.sh`）と、`ansible-playbook`（dry-run と本実行）のみ。それ以外のコマンドは実行しない。`pc/.vault_pass` は存在確認のみで、中身を表示・送信・書き込みしない。
+仕様の正は常に `pc/README.md` と `pc/playbook.yml` そのもの。この SKILL.md と食い違う場合は実物を優先する。
 
 ## このスキルが自動化しないこと(重要)
 
-Ansible の `command`/`shell` タスクも、Claude Code の Bash ツールも、**実行中のプロセスへ人間のキー入力をリアルタイムでリレーする経路を持たない**。stdin は繋がらず即座に EOF が渡るだけなので、「対話プロンプトが出たら途中で答える」という運用は成立しない。この前提から、以下は明確にスコープ外として扱い、黙って成功したことにしない。
+Ansible の `command`/`shell` タスクも、エージェントのシェル実行も、**実行中のプロセスへ人間のキー入力をリアルタイムでリレーする経路を持たない**。stdin は繋がらず即座に EOF が渡るだけなので、「対話プロンプトが出たら途中で答える」という運用は成立しない。この前提から、以下は明確にスコープ外として扱い、黙って成功したことにしない。
 
 - **`pc/.vault_pass`(ansible-vault のパスワード)**: 値をチャットで受け取ったり、こちらから書き込んだりしない。存在確認のみ行う。
 - **sudo (become) パスワード**: `--ask-become-pass` のプロンプトには答えられない。`sudo -n true` で自動実行可否を判定するだけに留める。
@@ -68,15 +70,15 @@ ansible-playbook -i pc/inventory.ini pc/playbook.yml \
   --vault-password-file pc/.vault_pass
 ```
 
-- `argument-hint` で `apply` が明示された場合、または dry-run の差分をオペレーターが確認済みの場合はここまで自動で進めてよい。
-- それ以外(引数省略時)は、3. の差分を見せた上で「このまま apply していいか」を一度確認してから実行する。
+- オペレーターが引数で `apply` を明示した場合、または dry-run の差分をオペレーターが確認済みの場合はここまで自動で進めてよい。
+- それ以外(引数省略時。引数は `check` / `apply`、省略時は check → 差分確認の上オペレーターに続行可否を尋ねてから apply)は、3. の差分を見せた上で「このまま apply していいか」を一度確認してから実行する。
 
 ### 5. 事後確認
 
 README の「5. セットアップ後の確認」に対応する項目を、表示するだけでなく期待値と突き合わせて OK/NG を判定する。単なる `chezmoi status`/`asdf current`/`echo $SHELL` の出力表示では「差分ゼロ=成功」「.tool-versions と揃っているか」「シェルが本当に切り替わったか」を自動判定できない(`$SHELL` は現在のプロセスの環境変数で、ログインシェル変更の反映を見るには不向き)ため、これらを判定するスクリプトを用意している:
 
 ```sh
-bash .claude/skills/bootstrap/scripts/verify.sh
+bash .agents/skills/bootstrap/scripts/verify.sh
 ```
 
 このスクリプトが行う判定:
