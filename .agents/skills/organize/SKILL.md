@@ -47,7 +47,13 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 
 1. 変更したリポジトリごとに、main のままコミットする（ブランチは切らない）。Conventional Commits・日本語。
 2. push はオペレーターに確認してから行う。homedir は Claude の設定や指示ファイルを含むため自動承認されないことがある。その場合はオペレーターが自分の端末で push する。
-3. push 後、Environment のサブモジュールが指すコミットを最新に上げるかをオペレーターに提案する。承認されたら次を実行してコミットする（履歴に `chore: bump homedir submodule to latest` がある）。未初期化なら先に `git submodule update --init <name>`。
-   ```sh
-   git submodule update --remote <name>
-   ```
+3. homedir / agent-plugins を変更して push したら、続けて `scripts/sync-submodules.sh` を実行し、Environment のサブモジュールを最新に上げてコミットする（提案不要・自動で行う）。その後、Environment の push をオペレーターに確認する。
+
+## 6. サブモジュールの扱い（AI が全部やる）
+
+`homedir/` と `agent-plugins/` は Environment 側から全体を把握するための参照用。オペレーターはサブモジュールの操作を知らなくてよい前提で、AI が `scripts/sync-submodules.sh` で面倒を見る。
+
+- 「サブモジュールを更新して」「最新にして」と頼まれたらこのスクリプトを使う。未初期化なら初期化し、追跡ブランチの最新に上げ、変わったものだけ Environment にコミットする（push はしない）。`--dry-run` なら何が上がるかだけ見られる。
+- Environment を clone した直後の初期化にも使える。
+- サブモジュール内に未コミットの変更やローカルコミットがあると、何も変えずに中止する。内容をオペレーターに説明し、変更を実 clone 側に移すか破棄するかを確認する。勝手に破棄しない。
+- 報告は git 用語を避けて平易にする。何がどのコミットに上がったか、どんな変更が入ったか（スクリプトの出力にある一行ログから要約する）。
