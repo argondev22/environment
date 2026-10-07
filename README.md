@@ -1,11 +1,12 @@
-# environments
+# environment
 
 PCの環境のIaCや各種設定ファイルをまとめたリポジトリ。
 
 ## ディレクトリ構成
 
 ```text
-environments/
+environment/
+├── .agents/     # AIエージェント用スキル
 ├── config/      # 設定ファイル
 ├── homedir/     # homedir（サブモジュール）
 ├── pc/          # Ansible
