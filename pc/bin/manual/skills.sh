@@ -11,12 +11,12 @@
 # フラグの意味:
 #   --skill <name>  リポジトリ内の特定スキルだけを対象
 #   -g              グローバル(~/.agents/skills)にインストール
-#   -a claude-code  対象エージェントを claude-code に限定
+#   -a <agent>      対象エージェントを限定（複数指定は -a を繰り返す。ここでは claude-code と codex）
 
 set -e
 
 # https://www.skills.sh/mattpocock/skills
-npx skills add vercel-labs/skills --skill find-skills -g -a claude-code
+npx skills add vercel-labs/skills --skill find-skills -g -a claude-code -a codex
 
 # https://www.skills.sh/mattpocock/skills/grill-me
-npx skills add mattpocock/skills --skill grill-me -g -a claude-code
+npx skills add mattpocock/skills --skill grill-me -g -a claude-code -a codex
