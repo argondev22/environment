@@ -51,6 +51,7 @@ Claude と Codex の両方を揃える（Codex 非対応のマーケットプレ
 
 - 日常的にグローバルで使うツール（CLI・アプリ）: `dot_Brewfile` に `brew "<formula>"` / `cask "<cask>"` を足す。
 - プロジェクトごとにバージョンを変えたい開発ツール: グローバル既定は `dot_config/mise/config.toml` の `[tools]` に足す（ツール名は mise の registry で確認する）。プロジェクト固有のバージョンはそのリポジトリの `mise.toml` に書く（homedir ではない）。
+- Homebrew に無いツール（npm・pipx・cargo・GitHub Releases などで配布）: `dot_config/mise/config.toml` の `[tools]` に mise のバックエンドで書く（例: `"npm:<pkg>" = "<version>"`、`"pipx:<pkg>"`、`"github:<owner>/<repo>"`。使えるバックエンドと書き方は mise の公式ドキュメントで確認する）。`npm install -g` などで入れると Node.js の切り替えで消え、記録も残らないため使わない。
 - ソース（`dot_Brewfile`・`dot_config/mise/config.toml`）が唯一の真実。`brew install`・`mise use -g` や `~` 側の直接編集はしない。
 - 実機への反映はオペレーターの端末で `chezmoi apply` のあと `brew bundle --file=~/.Brewfile` / `mise install`。Brewfile から消したものを実機からも消すなら `brew bundle cleanup --file=~/.Brewfile`（確認後 `--force`）。
 - 他のマシンへは、Environment で `git pull` → `scripts/sync-submodules.sh` → `chezmoi apply`（→ 上記の反映）。

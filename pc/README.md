@@ -9,7 +9,8 @@
 | コア（zsh・chezmoi・age） | playbook が直接 Homebrew で入れる。Brewfile には書かない |
 | 日常的にグローバルで使うツール | Homebrew（homedir の `dot_Brewfile`） |
 | プロジェクトごとにバージョンを変えたい開発ツール | mise（グローバル既定は homedir の `dot_config/mise/config.toml`、プロジェクト固有は各リポジトリの `mise.toml`） |
-| 上記で入らないもの | `bin/`（自動実行）・`bin/manual/`（手動実行） |
+| Homebrew に無いツール（npm・pipx・cargo・GitHub Releases などで配布） | mise のバックエンド（`npm:<pkg>` など。グローバル既定は `dot_config/mise/config.toml`） |
+| 上記で入らないもの（インストールスクリプトでしか入らない等） | `bin/`（自動実行）・`bin/manual/`（手動実行） |
 | dotfiles・上記の設定ファイル | chezmoi（ソースは `~/Environment/homedir` サブモジュール） |
 
 機密性の高い dotfiles は age で暗号化する。`~` 配下は直接編集せず、ソースを編集して `chezmoi apply` で反映する。
