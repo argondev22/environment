@@ -31,7 +31,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 | 自作スキル・プラグインで、どの環境でも使える | agent-plugins |
 | 自作スキルで、個人 PC に依存する | homedir の `dot_agents/skills/` |
 | ドットファイル | homedir |
-| 新しいエージェントに対応 | homedir（グローバル指示・スキル・プラグイン設定）＋ Environment の `skills.sh` の `-a` ＋ agent-plugins のマニフェスト |
+| 新しいエージェントに対応 | 3リポジトリ横断。`references/new-agent.md` のチェックリストに従う |
 
 迷ったとき（汎用か個人 PC 依存か、など）は推測せずオペレーターに確認する。
 
