@@ -47,6 +47,11 @@ Claude と Codex の両方を揃える（Codex 非対応のマーケットプレ
 
 3リポジトリ横断の作業なので `references/new-agent.md` に従う（homedir の分は同ファイルの 1）。
 
+### ツールを追加する
+
+- 日常的にグローバルで使うツール（CLI・アプリ）: `dot_Brewfile` に `brew "<formula>"` / `cask "<cask>"` を足す。
+- プロジェクトごとにバージョンを変えたい開発ツール: グローバル既定は `dot_config/mise/config.toml` の `[tools]` に足す（ツール名は mise の registry で確認する）。プロジェクト固有のバージョンはそのリポジトリの `mise.toml` に書く（homedir ではない）。
+
 ### ドットファイルを追加する
 
 - `~/.foo` は `dot_foo`。実行ファイルは `executable_`、権限を絞るなら `private_`、リンクは `symlink_`、環境依存は `.tmpl`。

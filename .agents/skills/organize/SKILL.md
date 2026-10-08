@@ -11,7 +11,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 
 | リポジトリ | 役割 | 編集する場所 |
 |---|---|---|
-| Environment（argondev22/environment） | PC 構築の入口。Ansible playbook（`pc/`）で Homebrew / asdf / chezmoi / zsh / age を入れ、chezmoi で homedir を展開する。外部スキルの導入（`pc/bin/manual/skills.sh`）も持つ | このリポジトリ（`~/Environment`） |
+| Environment（argondev22/environment） | PC 構築の入口。Ansible playbook（`pc/`）で Homebrew / mise / chezmoi / zsh / age を入れ、chezmoi で homedir を展開する。外部スキルの導入（`pc/bin/manual/skills.sh`）も持つ | このリポジトリ（`~/Environment`） |
 | homedir（argondev22/homedir） | chezmoi のソース。`~` 配下のドットファイル・エージェント設定の正 | `~/Environment/homedir`（サブモジュール = chezmoi のソース。`chezmoi source-path` で確認できる） |
 | agent-plugins（argondev22/agent-plugins） | 自作の汎用スキル・プラグイン（どの環境でも使えるもの） | `~/Environment/agent-plugins`（サブモジュール） |
 
@@ -23,9 +23,9 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 
 | やりたいこと | 変更先 |
 |---|---|
-| Homebrew で入れるツール | homedir の `dot_Brewfile` |
-| asdf で入れるツール | homedir の `dot_tool-versions` |
-| 上記どちらでも入らないツール | Environment の `pc/bin/`（冪等・非対話）。対話が必要なら `pc/bin/manual/` |
+| 日常的にグローバルで使うツール（CLI・アプリ） | homedir の `dot_Brewfile` |
+| プロジェクトごとにバージョンを変えたい開発ツール | グローバル既定は homedir の `dot_config/mise/config.toml`、プロジェクト固有はそのリポジトリの `mise.toml` |
+| 上記のどれでも入らないツール | Environment の `pc/bin/`（冪等・非対話）。対話が必要なら `pc/bin/manual/` |
 | 他人のスキル（SKILL.md だけのリポジトリ） | Environment の `pc/bin/manual/skills.sh` に `npx skills add <repo> --skill <name> -g -a claude-code -a codex` を追記。**実行はオペレーター自身の端末で** |
 | 他人のプラグイン（マーケットプレイスとして配布） | homedir で登録・有効化（`references/homedir.md`） |
 | 自作スキル・プラグインで、どの環境でも使える | agent-plugins |

@@ -31,30 +31,22 @@ else
   fi
 fi
 
-echo "--- asdf ---"
-tool_versions="$HOME/.tool-versions"
-if ! command -v asdf >/dev/null 2>&1; then
-  echo "asdf: NG (asdf コマンドが見つかりません)"
+echo "--- mise ---"
+mise_config="$HOME/.config/mise/config.toml"
+if ! command -v mise >/dev/null 2>&1; then
+  echo "mise: NG (mise コマンドが見つかりません)"
   status=1
-elif [ -f "$tool_versions" ]; then
-  while read -r name version _rest; do
-    [ -z "${name:-}" ] && continue
-    case "$name" in \#*) continue ;; esac
-
-    if [ "$version" = "system" ]; then
-      echo "asdf $name: OK (system 指定のためスキップ)"
-      continue
-    fi
-
-    if asdf list "$name" 2>/dev/null | tr -d ' ' | grep -qx "$version"; then
-      echo "asdf $name $version: OK"
-    else
-      echo "asdf $name $version: NG (未インストール)"
-      status=1
-    fi
-  done < "$tool_versions"
+elif [ -f "$mise_config" ]; then
+  missing="$(cd "$HOME" && mise ls --missing 2>&1)"
+  if [ -z "$missing" ]; then
+    echo "mise: OK (グローバル既定のツールはすべてインストール済み)"
+  else
+    echo "mise: NG (未インストールのツールがあります)"
+    echo "$missing"
+    status=1
+  fi
 else
-  echo "asdf: $tool_versions が見つかりません(スキップ)"
+  echo "mise: $mise_config が見つかりません(スキップ)"
 fi
 
 echo "--- shell ---"

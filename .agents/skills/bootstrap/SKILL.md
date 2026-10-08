@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: このリポジトリ(Environment)の pc/ にある Ansible playbook（Homebrew / asdf / chezmoi / zsh のマシンセットアップ）を、前提チェック → dry-run → 本実行 → 事後確認までまとめて進める。vault パスワードや sudo 認証など対話で答えられない秘密情報はチャット上で扱わず、欠けていれば安全に停止して案内する。「初期セットアップして」「playbook実行して」「マシンをセットアップし直して」「環境を最新状態に揃えて」「bootstrap」などで起動。
+description: このリポジトリ(Environment)の pc/ にある Ansible playbook（Homebrew / mise / chezmoi / zsh のマシンセットアップ）を、前提チェック → dry-run → 本実行 → 事後確認までまとめて進める。vault パスワードや sudo 認証など対話で答えられない秘密情報はチャット上で扱わず、欠けていれば安全に停止して案内する。「初期セットアップして」「playbook実行して」「マシンをセットアップし直して」「環境を最新状態に揃えて」「bootstrap」などで起動。
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 **オペレーターが明示的に呼んだときだけ実行する。会話の流れから自動で実行しない。**
 
-実行してよいのは、本文の手順に出てくる読み取り系の確認コマンド（`uname` / `xcode-select -p` / `ansible --version` / `test` / `sudo -n true` / `chezmoi` / `asdf` / `dscl` / `brew bundle check` / `find` / `ls` と `verify.sh`）と、`ansible-playbook`（dry-run と本実行）のみ。それ以外のコマンドは実行しない。`pc/.vault_pass` は存在確認のみで、中身を表示・送信・書き込みしない。
+実行してよいのは、本文の手順に出てくる読み取り系の確認コマンド（`uname` / `xcode-select -p` / `ansible --version` / `test` / `sudo -n true` / `chezmoi` / `mise` / `dscl` / `brew bundle check` / `find` / `ls` と `verify.sh`）と、`ansible-playbook`（dry-run と本実行）のみ。それ以外のコマンドは実行しない。`pc/.vault_pass` は存在確認のみで、中身を表示・送信・書き込みしない。
 仕様の正は常に `pc/README.md` と `pc/playbook.yml` そのもの。この SKILL.md と食い違う場合は実物を優先する。
 
 ## このスキルが自動化しないこと(重要)
@@ -21,6 +21,10 @@ Ansible の `command`/`shell` タスクも、エージェントのシェル実�
 - **`pc/.vault_pass`(ansible-vault のパスワード)**: 値をチャットで受け取ったり、こちらから書き込んだりしない。存在確認のみ行う。
 - **sudo (become) パスワード**: `--ask-become-pass` のプロンプトには答えられない。`sudo -n true` で自動実行可否を判定するだけに留める。
 - **`pc/bin/manual/` 配下のスクリプト**: 対話確認をあえて残したいスクリプト（例: `skills.sh` の `npx skills add` 確認プロンプト）はここに置かれ、playbook からは実行されない(`pc/playbook.yml` の `Discover custom scripts` タスクは `pc/bin/` 直下のみを非再帰で見る設計)。このスキルはここを自動実行せず、オペレーター自身の端末での手動実行を案内する。
+
+## playbook のタスク順
+
+Homebrew 本体 → コアパッケージ(chezmoi・age・zsh) → zsh の設定 → chezmoi(homedir の用意・age 鍵・`chezmoi.toml`・apply) → `brew bundle`(`~/.Brewfile`。mise 本体もここで入る) → `mise install` → `pc/bin/` のカスタムスクリプト。
 
 ## 手順
 
@@ -77,7 +81,7 @@ ansible-playbook -i pc/inventory.ini pc/playbook.yml \
 
 ### 5. 事後確認
 
-README の「5. セットアップ後の確認」に対応する項目を、表示するだけでなく期待値と突き合わせて OK/NG を判定する。単なる `chezmoi status`/`asdf current`/`echo $SHELL` の出力表示では「差分ゼロ=成功」「.tool-versions と揃っているか」「シェルが本当に切り替わったか」を自動判定できない(`$SHELL` は現在のプロセスの環境変数で、ログインシェル変更の反映を見るには不向き)ため、これらを判定するスクリプトを用意している:
+README の「5. セットアップ後の確認」に対応する項目を、表示するだけでなく期待値と突き合わせて OK/NG を判定する。単なる `chezmoi status`/`mise ls --current`/`echo $SHELL` の出力表示では「差分ゼロ=成功」「mise のグローバル既定ツールが入っているか」「シェルが本当に切り替わったか」を自動判定できない(`$SHELL` は現在のプロセスの環境変数で、ログインシェル変更の反映を見るには不向き)ため、これらを判定するスクリプトを用意している:
 
 ```sh
 bash .agents/skills/bootstrap/scripts/verify.sh
@@ -86,7 +90,7 @@ bash .agents/skills/bootstrap/scripts/verify.sh
 このスクリプトが行う判定:
 
 - **chezmoi**: `chezmoi source-path` が Environment の `homedir/`（サブモジュール）を指しているか、`chezmoi status` の出力が空かどうかを判定
-- **asdf**: `~/.tool-versions` を1行ずつ読み、`asdf list <tool>` に指定バージョンが入っているかを突き合わせて未インストールを名指しする(`system` 指定はスキップ)
+- **mise**: `~/.config/mise/config.toml` があれば、`mise ls --missing` が空かどうかで未インストールのツールを判定し、あれば名指しする
 - **shell**: `$SHELL` ではなく `dscl . -read /Users/<user> UserShell` で実際のログインシェル設定を確認する
 - **Brewfile**: `brew bundle check --file=~/.Brewfile` で差分の有無を判定
 - **age**: 秘密鍵から公開鍵を抽出できるかを確認
