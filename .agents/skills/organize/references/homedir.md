@@ -51,6 +51,9 @@ Claude と Codex の両方を揃える（Codex 非対応のマーケットプレ
 
 - 日常的にグローバルで使うツール（CLI・アプリ）: `dot_Brewfile` に `brew "<formula>"` / `cask "<cask>"` を足す。
 - プロジェクトごとにバージョンを変えたい開発ツール: グローバル既定は `dot_config/mise/config.toml` の `[tools]` に足す（ツール名は mise の registry で確認する）。プロジェクト固有のバージョンはそのリポジトリの `mise.toml` に書く（homedir ではない）。
+- ソース（`dot_Brewfile`・`dot_config/mise/config.toml`）が唯一の真実。`brew install`・`mise use -g` や `~` 側の直接編集はしない。
+- 実機への反映はオペレーターの端末で `chezmoi apply` のあと `brew bundle --file=~/.Brewfile` / `mise install`。Brewfile から消したものを実機からも消すなら `brew bundle cleanup --file=~/.Brewfile`（確認後 `--force`）。
+- 他のマシンへは、Environment で `git pull` → `scripts/sync-submodules.sh` → `chezmoi apply`（→ 上記の反映）。
 
 ### ドットファイルを追加する
 
@@ -61,10 +64,12 @@ Claude と Codex の両方を揃える（Codex 非対応のマーケットプレ
 ## 確認
 
 - JSON/TOML の妥当性：
+
   ```sh
   python3 -m json.tool dot_claude/settings.json
   python3 -c 'import tomllib,sys; tomllib.load(open(sys.argv[1],"rb"))' dot_codex/config.toml
   ```
+
 - chezmoi があればスクラッチに展開して確認する：`--source ~/Environment/homedir --destination <scratch>/home --config <scratch>/chezmoi.toml --cache <scratch>/cache --exclude externals,encrypted`。`~` には書き込まない。
 
 ## git

@@ -34,9 +34,10 @@ Homebrew 本体 → コアパッケージ(chezmoi・age・zsh) → zsh の設定
 - Xcode Command Line Tools: `xcode-select -p` が通ること。
   - `pc/inventory.ini` は `ansible_python_interpreter=/usr/bin/python3` を指定しており、CLT 未導入の真っさらな Mac では **この python3 の初回起動時に「コマンドラインデベロッパツールをインストールしますか」という GUI ダイアログが出る**。これは ansible が gather_facts で最初に踏む一歩なので、ansible 側のどのタスクよりも前に起きる。GUI ダイアログはこのスキルからは応答できないので、ansible を呼ぶ前にここで検出して止める。
   - 無ければ停止し、オペレーターに **自分の端末で** `xcode-select --install` を実行してダイアログの案内に従いインストールを完了してから、再度このスキルを呼ぶよう案内する。
-- Ansible: `ansible --version` が通ること。通らなければ README の「1. Ansible のインストール」を案内して停止。
+- Ansible: `ansible --version` が通ること。通らなければ「補足」の `pipx install ansible` を案内して停止。
 - vault パスワード: `test -f pc/.vault_pass` で存在確認のみ行う(中身は読まない/表示しない)。
   - 無ければ停止し、オペレーターに **自分の端末で** 以下を実行してから再度このスキルを呼ぶよう案内する:
+
     ```sh
     echo "your-vault-pass" > pc/.vault_pass
     ```
@@ -81,7 +82,7 @@ ansible-playbook -i pc/inventory.ini pc/playbook.yml \
 
 ### 5. 事後確認
 
-README の「5. セットアップ後の確認」に対応する項目を、表示するだけでなく期待値と突き合わせて OK/NG を判定する。単なる `chezmoi status`/`mise ls --current`/`echo $SHELL` の出力表示では「差分ゼロ=成功」「mise のグローバル既定ツールが入っているか」「シェルが本当に切り替わったか」を自動判定できない(`$SHELL` は現在のプロセスの環境変数で、ログインシェル変更の反映を見るには不向き)ため、これらを判定するスクリプトを用意している:
+`chezmoi` / `mise` / ログインシェル / Brewfile / age の状態を、表示するだけでなく期待値と突き合わせて OK/NG を判定する。単なる `chezmoi status`/`mise ls --current`/`echo $SHELL` の出力表示では「差分ゼロ=成功」「mise のグローバル既定ツールが入っているか」「シェルが本当に切り替わったか」を自動判定できない(`$SHELL` は現在のプロセスの環境変数で、ログインシェル変更の反映を見るには不向き)ため、これらを判定するスクリプトを用意している:
 
 ```sh
 bash .agents/skills/bootstrap/scripts/verify.sh
@@ -102,13 +103,21 @@ exit code が非0、または出力末尾の「総合判定: NG」があれば�
 `pc/bin/manual/` 配下のスクリプトを列挙し(`find pc/bin/manual -name "*.sh"`)、実行結果に関わらず必ず次を明示する(黙って省略しない):
 
 > 以下は対話確認ありで実行したい工程のため自動実行の対象外です。自分の端末で直接実行してください:
+>
 > - `pc/bin/manual/skills.sh`
 > - `pc/bin/manual/1password.sh`
+>
 > （`find` の実行結果に基づいて列挙する。`pc/bin/manual/` の中身は増減するので、決め打ちにせず毎回動的に確認する）
+
+## 補足（pc/ の Makefile と vault）
+
+- `pc/Makefile`（`pc/` で実行。いずれも `--ask-become-pass` 付きで、このスキルからは使えない。オペレーターの端末用）: `make syntax`（構文チェック）、`make check`（dry-run）、`make apply`（本実行）、`make debug`（`-vvv` の dry-run）、`make clean`（`.vault_pass` を削除）。playbook を修正するときは、いきなり `make apply` せず `make check` で確認する（`check` と `apply` で挙動が変わるタスクもある）。
+- vault: `pc/group_vars/all.yml` が Ansible Vault で暗号化されている。復号パスワードは `pc/.vault_pass`（gitignore 済み。平文でコミットしない）。中身の確認・編集はオペレーターの端末で `ansible-vault view|edit group_vars/all.yml`（`pc/` で実行）。
+- 初回の Ansible は `pipx install ansible`（`ansible-core` ではなくフル版。playbook が `community.general.homebrew` を使う）。
 
 ## 報告フォーマット
 
-```
+```text
 === bootstrap 実行結果 ===
 前提チェック   : OK / NG(理由)
 sudo           : パスワードレス / キャッシュ利用 / 未認証(停止)

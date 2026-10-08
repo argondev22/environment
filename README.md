@@ -23,7 +23,7 @@ environment/
 
 ## 初回セットアップ
 
-サブモジュールごと clone してから playbook を実行する。ツールは、日常的にグローバルで使うものを Homebrew（homedir の `dot_Brewfile`）、プロジェクトごとにバージョンを変えたい開発ツールを mise（グローバル既定は homedir の `dot_config/mise/config.toml`、プロジェクト固有は各リポジトリの `mise.toml`）で管理する（`pc/README.md` の「初回セットアップ」を参照）。
+サブモジュールごと clone してから playbook を実行する。手順は `pc/README.md` を参照。
 
 ```sh
 git clone --recurse-submodules git@github.com:argondev22/environment.git ~/Environment

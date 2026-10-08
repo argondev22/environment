@@ -1,388 +1,51 @@
-# Ansible による統一ユーザー空間の自動構築
+# pc — Ansible による PC 環境の構築
 
-## 目次
+新しいマシンの初期構築と、実機を宣言状態へ揃え直す全体リコンサイルに使う（冪等）。日々のツール・dotfiles の追加・変更に playbook は不要で、`organize` スキルの手順（chezmoi 経由）で行う。macOS（Apple Silicon / Intel）専用。Ansible は 2.18.x で確認済み。
 
-- [主なコンポーネント](#主なコンポーネント)
-- [動作確認済みの Ansible バージョン](#動作確認済みの-ansible-バージョン)
-- [対応プラットフォーム](#対応プラットフォーム)
-- [運用ルール](#運用ルール)
-- [注意事項](#注意事項)
-- [トラブルシューティング](#トラブルシューティング)
-- [よく用いるコマンド集](#よく用いるコマンド集)
-- [初回セットアップ](#初回セットアップ)
+## 管理方針
 
-## 主なコンポーネント
+| 区分 | 管理先 |
+|---|---|
+| コア（zsh・chezmoi・age） | playbook が直接 Homebrew で入れる。Brewfile には書かない |
+| 日常的にグローバルで使うツール | Homebrew（homedir の `dot_Brewfile`） |
+| プロジェクトごとにバージョンを変えたい開発ツール | mise（グローバル既定は homedir の `dot_config/mise/config.toml`、プロジェクト固有は各リポジトリの `mise.toml`） |
+| 上記で入らないもの | `bin/`（自動実行）・`bin/manual/`（手動実行） |
+| dotfiles・上記の設定ファイル | chezmoi（ソースは `~/Environment/homedir` サブモジュール） |
 
-- **[Ansible](https://www.ansible.com/)**: 構成管理（初期構築・全体リコンサイル）
-- **[Homebrew](https://brew.sh/)**: パッケージ管理
-- **[mise](https://mise.jdx.dev/)**: プロジェクトごとにバージョンを変えたい開発ツールの管理
-- **[chezmoi](https://www.chezmoi.io/)**: dotfile の管理
-- **[zsh](https://www.zsh.org/)**: デフォルトシェル
-- **[age](https://age-encryption.org/)**: 機密性の高い dotfiles を暗号化して安全に管理
+機密性の高い dotfiles は age で暗号化する。`~` 配下は直接編集せず、ソースを編集して `chezmoi apply` で反映する。
 
-## 動作確認済みの Ansible バージョン
+## ディレクトリ構成
 
-| バージョン | 対応状況 | 備考         |
-|-----------|---------|-------------|
-| 2.18.x    | ✅      | 推奨バージョン |
+| パス | 内容 |
+|---|---|
+| `playbook.yml` | 本体 |
+| `inventory.ini`・`group_vars/all.yml` | 対象ホストと変数（`all.yml` は Ansible Vault で暗号化） |
+| `templates/` | 生成するファイルの雛形 |
+| `bin/` | 直下の `*.sh` を playbook が自動実行する（冪等・非対話） |
+| `bin/manual/` | 対話が必要なスクリプト。オペレーターが自分の端末で実行する |
+| `Makefile` | `make syntax` / `check` / `apply` / `debug` / `clean` |
 
-## 対応プラットフォーム
-
-| OS              | アーキテクチャ                | ステータス |
-|-----------------|---------------------------|----------|
-| macOS           | Apple Silicon (M1/M2/M3)  | ✅       |
-| macOS           | Intel x64                 | ✅       |
-
-## 運用ルール
-
-### 管理対象
-
-- パッケージ/ツール
-- homedir
-
-### 管理方針
-
-#### パッケージ/ツール
-
-1. 日常的にグローバルで使うツール（CLI・アプリ）は Homebrew で管理（`dot_Brewfile`）
-2. プロジェクトごとにバージョンを変えたい開発ツールは mise で管理
-   - グローバル既定は homedir の `dot_config/mise/config.toml`（`~/.config/mise/config.toml`）
-   - プロジェクト固有のバージョンは、各リポジトリの `mise.toml`（または `.tool-versions`）で上書きする
-3. 上記で対応できない場合は、[`bin/`](bin/) にカスタムのインストールスクリプトを作成
-   - `bin/` 直下: playbook が自動実行する。**冪等かつ非対話**が前提（確認プロンプトを出すコマンドを置かない）。
-   - `bin/manual/`: 対話確認が必要なスクリプトはここに置く。playbook からは実行されず、オペレーターが自分の端末で直接実行する（`bootstrap` スキルが実行タイミングを案内する）。
-
-**概略図**:
-
-```text
-(デフォルトのパッケージマネージャー)
-└── ansible
-
-brew
-├── zsh / chezmoi / age   # コア（基盤。playbook が先に入れる）
-├── mise
-│   ├── ~/.config/mise/config.toml # 2. グローバル既定の開発ツール
-│   └── <各リポジトリ>/mise.toml   #    プロジェクト固有のバージョン
-└── ... # 1. 日常的にグローバルで使うツール（Brewfile）
-
-(カスタムスクリプト) # 3. 上記で対応できない場合は、カスタムスクリプトを作成
-```
-
-#### homedir
-
-- chezmoi で全て管理
-
-### playbook（`make apply`）の位置づけ
-
-`playbook.yml` は **新しいマシンの初期構築** と、**実機を宣言状態へ揃え直す全体リコンサイル**（任意）に使う。冪等なのでいつ実行しても安全。
-
-一方、**日々のパッケージ/dotfiles の追加・変更に playbook は不要**。各ツール（chezmoi / mise / Homebrew）のネイティブコマンドで完結する（下記「運用フロー」）。
-
-playbook のタスク順:
+## playbook のタスク順
 
 1. Homebrew 本体
-2. コアパッケージ（基盤。chezmoi・age・zsh。Homebrew で入れる）
+2. コアパッケージ（chezmoi・age・zsh）
 3. zsh の設定（`/etc/shells` 登録・既定シェル化）
-4. chezmoi（homedir サブモジュールの用意、age 鍵の配置、`chezmoi.toml` の生成、`chezmoi apply`）
-5. `brew bundle`（`~/.Brewfile`。日常ツールと mise 本体が入る）
-6. `mise install`（`~/.config/mise/config.toml` のグローバル既定ツール）
+4. chezmoi（homedir の用意、age 鍵の配置、`chezmoi.toml` の生成、`chezmoi apply`）
+5. `brew bundle`（`~/.Brewfile`。mise 本体もここで入る）
+6. `mise install`（グローバル既定ツール）
 7. `bin/` のカスタムスクリプト
-
-コアパッケージは playbook が直接入れる基盤で、日常的に触る Brewfile には書かない。
-
-### 運用フロー
-
-いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles / mise の設定 / Brewfile は chezmoi のソース（Environment のサブモジュール `~/Environment/homedir/`。chezmoi の `sourceDir` がここを指す）を「唯一の真実」とし、`~/` 配下は直接編集しない。ソースの変更は `~/Environment/homedir` の中で commit・push し、そのあと Environment 側のポインタを更新する（下記「サブモジュールの作業」）。
-
-#### homedir（chezmoi）
-
-1. 編集して適用する
-
-   ```sh
-   chezmoi edit --apply .your-dotfile # ソースの dot_your-dotfile を編集し、~/ まで反映
-   ```
-
-   ※ 直接 `~/.your-dotfile` を編集しないこと
-
-2. push する
-
-   ```sh
-   chezmoi git add .
-   chezmoi git commit -m "コミットメッセージ"
-   chezmoi git push origin main
-   ```
-
-3. Environment のポインタを更新する（下記「サブモジュールの作業」）
-
-4. 他のマシンへ同期する
-
-   ```sh
-   cd ~/Environment && git pull
-   .agents/skills/organize/scripts/sync-submodules.sh
-   chezmoi apply
-   ```
-
-#### サブモジュールの作業
-
-`homedir/`（chezmoi のソース）と `agent-plugins/` は Environment のサブモジュールだが、**この中で直接作業する**。git のサブモジュール操作はスクリプトに任せる。
-
-1. 作業前: `.agents/skills/organize/scripts/sync-submodules.sh`（未初期化なら init し、main に載せて最新化する）
-2. サブモジュールの中で編集・commit（main のまま。ブランチは切らない）・push
-3. 作業後: もう一度 `.agents/skills/organize/scripts/sync-submodules.sh`（Environment にポインタ更新をコミットする。push はしない）→ Environment を push
-
-未コミットの変更・未 push のコミット・履歴の分岐があるサブモジュールは、何も変えずに報告して終了コード 1 で終わる。
-
-#### mise
-
-プロジェクト固有のバージョンは、各リポジトリの `mise.toml`（または `.tool-versions`）に書く。以下はグローバル既定（全リポジトリ共通の既定バージョン）の追加手順。
-
-1. `dot_config/mise/config.toml` を編集して適用する
-
-   ```sh
-   chezmoi edit --apply ~/.config/mise/config.toml # 例: [tools] に terraform = "1.10.3" を追記
-   ```
-
-   ※ 直接 `~/.config/mise/config.toml` を編集しないこと（`mise use -g` も使わない）
-
-2. 実機にインストールする
-
-   ```sh
-   mise install # ~/.config/mise/config.toml を読んで入れる
-   ```
-
-3. push する
-
-   ```sh
-   chezmoi git add .
-   chezmoi git commit -m "コミットメッセージ"
-   chezmoi git push origin main
-   ```
-
-4. Environment のポインタを更新し、他のマシンへ同期する
-
-   ```sh
-   # push 後、~/Environment で .agents/skills/organize/scripts/sync-submodules.sh
-   # 他のマシンでは ~/Environment で git pull → sync-submodules.sh → chezmoi apply
-   chezmoi apply
-   mise install
-   ```
-
-#### Homebrew
-
-1. `.Brewfile` を編集して適用する
-
-   ```sh
-   chezmoi edit --apply .Brewfile # 例: brew "ripgrep" を追記
-   ```
-
-   ※ `brew install` は使わない（Brewfile を唯一の真実とし、二重管理・ドリフトを避ける）
-   ※ 直接 `~/.Brewfile` を編集しないこと
-
-2. 実機にインストールする
-
-   ```sh
-   brew bundle --file=~/.Brewfile
-   # Brewfile から削除したものを実機からも消す場合（確認後 --force）:
-   brew bundle cleanup --file=~/.Brewfile
-   ```
-
-3. push する
-
-   ```sh
-   chezmoi git add .
-   chezmoi git commit -m "コミットメッセージ"
-   chezmoi git push origin main
-   ```
-
-4. Environment のポインタを更新し、他のマシンへ同期する
-
-   ```sh
-   # push 後、~/Environment で .agents/skills/organize/scripts/sync-submodules.sh
-   # 他のマシンでは ~/Environment で git pull → sync-submodules.sh → chezmoi apply
-   chezmoi apply
-   brew bundle --file=~/.Brewfile
-   ```
-
-## 注意事項
-
-- ホームディレクトリ配下の dotfiles を直接修正しない。修正する際は必ず `~/Environment/homedir/` 配下を修正し、`chezmoi apply`（または `chezmoi edit --apply`）で反映させる。
-- 機密情報を平文のままリモートリポジトリにプッシュしない。chezmoi や ansible の暗号化機能を活用する。
-- playbook.yml の追加実装や修正を行う際は、`make check` でテスト・デバッグしながら進める（いきなり `make apply` を行わない）。ただし `make check` と `make apply` で一部挙動が変わるため、`make apply` でないと確認できないタスクも存在する。
-
-## トラブルシューティング
-
-### ansible
-
-- **Register zsh in /etc/shells タスクで実行が停止してしまう**:</br>
-    管理者権限昇格に必要なパスワード（`--ask-become-pass`）が正しいかどうか確認する
-
-### chezmoi
-
-- **初期化に失敗する**:</br>
-    下記を実行して確認する
-
-    ```sh
-    chezmoi doctor  # 設定確認
-    ls -la ~/.config/age/age.key  # 鍵の存在・権限確認
-    ```
-
-### シェル
-
-- **zsh に切り替わらない**:</br>
-    下記を実行して確認後、新しいターミナルを開く、またはログインし直す
-
-    ```sh
-    echo $SHELL
-    ```
-
-## よく用いるコマンド集
-
-### Ansible
-
-```sh
-# すべて ~/Environment/pc/ で実行
-
-# 暗号化した変数ファイルを編集
-ansible-vault edit group_vars/all.yml
-
-# 暗号化ファイルの中身を閲覧（編集しない）
-ansible-vault view group_vars/all.yml
-
-# ファイルを暗号化 / 復号
-ansible-vault encrypt group_vars/all.yml
-ansible-vault decrypt group_vars/all.yml
-
-# vault パスワードを変更
-ansible-vault rekey group_vars/all.yml
-
-# 構文チェック
-ansible-playbook --syntax-check -i inventory.ini playbook.yml
-
-# ドライラン（差分表示のみ・実機は変更しない）
-ansible-playbook -i inventory.ini playbook.yml --check --diff --ask-vault-pass --ask-become-pass
-
-# 本実行（環境を構築・更新）
-ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass --ask-become-pass
-```
-
-### mise
-
-```sh
-# グローバル既定（~/.config/mise/config.toml）のツールをインストール
-mise install
-
-# 未インストールのツールを確認
-mise ls --missing
-
-# 現在有効なツールとバージョン
-mise ls --current
-```
-
-### chezmoi
-
-```sh
-# 新しい dotfiles を追加
-chezmoi add ~/.your-dotfile
-
-# 機密性の高い dotfiles を追加
-chezmoi add --encrypt ~/.aws/credentials
-
-# .your-dotfile を編集して変更を適用
-chezmoi edit --apply .your-dotfile
-
-# 変更を適用
-chezmoi apply
-
-# 最新の変更を適用（先に ~/Environment で git pull → sync-submodules.sh）
-chezmoi apply
-
-# chezmoi のソースの場所（~/Environment/homedir を指す）
-chezmoi source-path
-```
-
-### Homebrew
-
-```sh
-# Brewfile の内容を実機に反映
-brew bundle --file=~/.Brewfile
-
-# Brewfile に無いものを実機から削除（確認後 --force）
-brew bundle cleanup --file=~/.Brewfile
-```
-
-### Git Submodule
-
-```sh
-# 初期化・main に載せる・最新化・Environment へポインタをコミット（作業の前後に実行）
-~/Environment/.agents/skills/organize/scripts/sync-submodules.sh
-
-# 何が起きるかだけ確認
-~/Environment/.agents/skills/organize/scripts/sync-submodules.sh --dry-run
-```
 
 ## 初回セットアップ
 
-### 0. 前提条件
-
-- GitHub に SSH 公開鍵を登録済みで、このリポジトリ（サブモジュール含む）を SSH でクローンできること。
-  - ※ この手順を経ることで GitHub の SSH ホスト鍵が `~/.ssh/known_hosts` に登録される。これが無い状態で サブモジュールの取得や `chezmoi apply`（`.chezmoiexternal.toml` の Vault/Memory clone を含む）が自動実行されると、初回接続の鍵確認プロンプトに応答できず失敗しうる（playbook 側でも `known_hosts` タスクとして担保しているが、根本はこの手動クローンで解消される）。
-- Xcode Command Line Tools がインストール済みであること（`xcode-select -p` で確認）。未導入の場合、`ansible_python_interpreter` が指す `/usr/bin/python3` の初回起動時に GUI のインストールダイアログが出る。これは ansible の gather_facts より前に起きるため、自動化では検知・応答できない。無ければ `xcode-select --install` を先に実行しておく。
-- Python インタプリタがインストールされていること（[Ansible のインストール](#1-ansible-のインストール)で必要。上記 Xcode Command Line Tools を導入すれば通常はこれも揃う）。
-
-### 1. Ansible のインストール
+前提: GitHub に SSH 公開鍵を登録済み、Xcode Command Line Tools 導入済み（無ければ `xcode-select --install`）。
 
 ```sh
-python3 -m pip install --user pipx   # pipx が未導入の場合
-python3 -m pipx ensurepath           # pipx / ansible に PATH を通す（新しいシェルで有効化）
-pipx install ansible                 # フル版（playbook が使う community.general を含む）
-```
-
-※ `ansible-core` ではなく **`ansible`（フル）** を入れる（playbook が `community.general.homebrew` モジュールを使うため）。
-※ macOS / Python のバージョンにより挙動が変わりうる（`externally-managed-environment` 等）。初回は実機で通ることを確認すること。
-
-### 2. 環境の準備
-
-```sh
-# サブモジュール（homedir = chezmoi のソース）ごと clone する。playbook の前にこれを行うのが確実
+pipx install ansible   # フル版（ansible-core ではない）
 git clone --recurse-submodules git@github.com:argondev22/environment.git ~/Environment
 cd ~/Environment/pc
+echo "<vault のパスワード>" > .vault_pass   # all.yml の復号用（gitignore 済み）
+make check   # dry-run
+make apply   # 本実行
 ```
 
-※ playbook は `homedir` が未取得なら `git submodule update --init homedir` を試みるが、GitHub への SSH 認証が要る。
-※ playbook は homedir を main に載せて fast-forward で最新化する（未コミットの変更・未 push があればスキップして表示）。chezmoi のソースは `~/Environment/homedir`（`~/.config/chezmoi/chezmoi.toml` の `sourceDir`）。
-
-### 3. `.vault_pass`ファイルの配置
-
-```sh
-echo "your-vault-pass" > .vault_pass
-```
-
-※ `.vault_pass`は`./group_vars/all.yml`の Ansible Vault を復号するためのパスワード
-
-### 4. セットアップ実行
-
-```sh
-# 事前確認（推奨）
-ansible-playbook -i inventory.ini playbook.yml --check --diff --vault-password-file .vault_pass
-
-# 本実行
-## sudoパスワードなし環境
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
-## sudoパスワードあり環境（実行時にパスワードを入力）
-ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass --ask-become-pass
-```
-
-### 5. セットアップ後の確認
-
-```sh
-# 環境の読み込み
-source ~/.zshrc
-
-# 各ツールの確認
-chezmoi status          # homedir状態
-chezmoi source-path     # ~/Environment/homedir を指すこと
-mise ls --current       # 有効な開発ツール（グローバル既定）
-mise ls --missing       # 未インストールが無いこと（出力なしが正常）
-echo $SHELL             # デフォルトシェル
-age-keygen -y ~/.config/age/age.key  # age公開鍵
-```
+実行と事後確認は `bootstrap` スキルが案内する。ツール・設定の追加とサブモジュールの扱いは `organize` スキルを参照。

@@ -25,7 +25,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 |---|---|
 | 日常的にグローバルで使うツール（CLI・アプリ） | homedir の `dot_Brewfile` |
 | プロジェクトごとにバージョンを変えたい開発ツール | グローバル既定は homedir の `dot_config/mise/config.toml`、プロジェクト固有はそのリポジトリの `mise.toml` |
-| 上記のどれでも入らないツール | Environment の `pc/bin/`（冪等・非対話）。対話が必要なら `pc/bin/manual/` |
+| 上記のどれでも入らないツール | Environment の `pc/bin/`。直下の `*.sh` は playbook が bash で自動実行する（**冪等・非対話**が前提。shebang は `#!/usr/bin/env bash`）。対話が必要なものは `pc/bin/manual/`（playbook は実行しない。オペレーターが自分の端末で実行。zsh でもよい） |
 | 他人のスキル（SKILL.md だけのリポジトリ） | Environment の `pc/bin/manual/skills.sh` に `npx skills add <repo> --skill <name> -g -a claude-code -a codex` を追記。**実行はオペレーター自身の端末で** |
 | 他人のプラグイン（マーケットプレイスとして配布） | homedir で登録・有効化（`references/homedir.md`） |
 | 自作スキル・プラグインで、どの環境でも使える | agent-plugins |
