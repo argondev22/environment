@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# provision-pc / bootstrap スキルの事後確認。
-# README「5. セットアップ後の確認」の各コマンドを、表示するだけでなく
+# bootstrap スキルの事後確認。
+# playbook 実行後の状態を、表示するだけでなく
 # 期待値と突き合わせて OK/NG を判定する。
 set -u
 

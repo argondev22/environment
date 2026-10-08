@@ -69,13 +69,13 @@ process() {
   local i="$1" name="${NAMES[$1]}" p="${PATHS[$1]}"
   local branch cur dirty lref ahead behind remote_sha ok_switch
 
-  OK[$i]=0
-  NEWSHA[$i]=""
+  OK[i]=0
+  NEWSHA[i]=""
 
   if [ ! -e "$p/.git" ]; then
     if [ "$DRY_RUN" = 1 ]; then
       echo "$name: 未初期化（実行すると init して main に載せます）"
-      OK[$i]=s
+      OK[i]=s
       return 0
     fi
     git submodule update --init -q -- "$p"
@@ -167,11 +167,11 @@ process() {
     if ! git -C "$p" rev-parse -q --verify "$branch@{upstream}" >/dev/null 2>&1; then
       git -C "$p" branch -q --set-upstream-to="origin/$branch" "$branch"
     fi
-    NEWSHA[$i]="$(git -C "$p" rev-parse HEAD)"
+    NEWSHA[i]="$(git -C "$p" rev-parse HEAD)"
   else
-    NEWSHA[$i]="$remote_sha"
+    NEWSHA[i]="$remote_sha"
   fi
-  OK[$i]=1
+  OK[i]=1
 }
 
 if [ "$DRY_RUN" = 1 ]; then echo "[dry-run] 何も変更しません（fetch のみ行います）。"; fi

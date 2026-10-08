@@ -1,0 +1,15 @@
+{
+  "globs": ["**/*.md"],
+  // サブモジュール（homedir・agent-plugins）は各リポジトリ側で検査する。
+  // .claude/skills は .agents/skills へのシンボリックリンク（二重に検査される）。
+  // .claude/CLAUDE.md は @import 1行だけで見出しを持たない
+  "ignores": ["homedir/**", "agent-plugins/**", "**/node_modules/**", ".claude/CLAUDE.md", ".claude/skills/**"],
+  "config": {
+    // 日本語の文章では行長が意味を持たない
+    "MD013": false,
+    // 日本語（全角）混じりの表で列幅が揃わず誤検知する
+    "MD060": false,
+    // 「`- `」のように末尾の空白まで含めて示すコードスパンが意図的に存在する
+    "MD038": false
+  }
+}
