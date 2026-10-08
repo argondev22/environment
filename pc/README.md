@@ -76,7 +76,7 @@ brew
 
 ### 運用フロー
 
-いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles/asdf/Brewfile は chezmoi のソース（`~/.local/share/chezmoi/`）を「唯一の真実」とし、`~/` 配下は直接編集しない。
+いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles/asdf/Brewfile は chezmoi のソース（Environment のサブモジュール `~/Environment/homedir/`。chezmoi の `sourceDir` がここを指す）を「唯一の真実」とし、`~/` 配下は直接編集しない。ソースの変更は `~/Environment/homedir` の中で commit・push し、そのあと Environment 側のポインタを更新する（下記「サブモジュールの作業」）。
 
 #### homedir（chezmoi）
 
@@ -96,11 +96,25 @@ brew
    chezmoi git push origin main
    ```
 
-3. 他のマシンへ同期する
+3. Environment のポインタを更新する（下記「サブモジュールの作業」）
+
+4. 他のマシンへ同期する
 
    ```sh
-   chezmoi update
+   cd ~/Environment && git pull
+   .agents/skills/organize/scripts/sync-submodules.sh
+   chezmoi apply
    ```
+
+#### サブモジュールの作業
+
+`homedir/`（chezmoi のソース）と `agent-plugins/` は Environment のサブモジュールだが、**この中で直接作業する**（実 clone は不要）。git のサブモジュール操作はスクリプトに任せる。
+
+1. 作業前: `.agents/skills/organize/scripts/sync-submodules.sh`（未初期化なら init し、main に載せて最新化する）
+2. サブモジュールの中で編集・commit（main のまま。ブランチは切らない）・push
+3. 作業後: もう一度 `.agents/skills/organize/scripts/sync-submodules.sh`（Environment にポインタ更新をコミットする。push はしない）→ Environment を push
+
+未コミットの変更・未 push のコミット・履歴の分岐があるサブモジュールは、何も変えずに報告して終了コード 1 で終わる。
 
 #### asdf
 
@@ -127,10 +141,12 @@ brew
    chezmoi git push origin main
    ```
 
-4. 他のマシンへ同期する
+4. Environment のポインタを更新し、他のマシンへ同期する
 
    ```sh
-   chezmoi update
+   # push 後、~/Environment で .agents/skills/organize/scripts/sync-submodules.sh
+   # 他のマシンでは ~/Environment で git pull → sync-submodules.sh → chezmoi apply
+   chezmoi apply
    asdf install # 新規プラグインがあれば asdf plugin add も
    ```
 
@@ -161,16 +177,18 @@ brew
    chezmoi git push origin main
    ```
 
-4. 他のマシンへ同期する
+4. Environment のポインタを更新し、他のマシンへ同期する
 
    ```sh
-   chezmoi update
+   # push 後、~/Environment で .agents/skills/organize/scripts/sync-submodules.sh
+   # 他のマシンでは ~/Environment で git pull → sync-submodules.sh → chezmoi apply
+   chezmoi apply
    brew bundle --file=~/.Brewfile
    ```
 
 ## 注意事項
 
-- ホームディレクトリ配下の dotfiles を直接修正しない。修正する際は必ず `~/.local/share/chezmoi/` 配下を修正し、`chezmoi apply`（または `chezmoi edit --apply`）で反映させる。
+- ホームディレクトリ配下の dotfiles を直接修正しない。修正する際は必ず `~/Environment/homedir/` 配下を修正し、`chezmoi apply`（または `chezmoi edit --apply`）で反映させる。
 - 機密情報を平文のままリモートリポジトリにプッシュしない。chezmoi や ansible の暗号化機能を活用する。
 - playbook.yml の追加実装や修正を行う際は、`make check` でテスト・デバッグしながら進める（いきなり `make apply` を行わない）。ただし `make check` と `make apply` で一部挙動が変わるため、`make apply` でないと確認できないタスクも存在する。
 
@@ -255,8 +273,11 @@ chezmoi edit --apply .your-dotfile
 # 変更を適用
 chezmoi apply
 
-# リモートリポジトリから最新の変更を取得して適用
-chezmoi update
+# 最新の変更を適用（先に ~/Environment で git pull → sync-submodules.sh）
+chezmoi apply
+
+# chezmoi のソースの場所（~/Environment/homedir を指す）
+chezmoi source-path
 ```
 
 ### Homebrew
@@ -272,11 +293,11 @@ brew bundle cleanup --file=~/.Brewfile
 ### Git Submodule
 
 ```sh
-# サブモジュールを初期化・更新
-git submodule update --init --recursive
+# 初期化・main に載せる・最新化・Environment へポインタをコミット（作業の前後に実行）
+~/Environment/.agents/skills/organize/scripts/sync-submodules.sh
 
-# サブモジュールを最新の状態に更新
-git submodule update --remote --merge
+# 何が起きるかだけ確認
+~/Environment/.agents/skills/organize/scripts/sync-submodules.sh --dry-run
 ```
 
 ## 初回セットアップ
@@ -284,7 +305,7 @@ git submodule update --remote --merge
 ### 0. 前提条件
 
 - GitHub に SSH 公開鍵を登録済みで、このリポジトリ（サブモジュール含む）を SSH でクローンできること。
-  - ※ この手順を経ることで GitHub の SSH ホスト鍵が `~/.ssh/known_hosts` に登録される。これが無い状態で `chezmoi init`/`chezmoi apply`（`.chezmoiexternal.toml` の Vault/Memory clone を含む）が自動実行されると、初回接続の鍵確認プロンプトに応答できず失敗しうる（playbook 側でも `known_hosts` タスクとして担保しているが、根本はこの手動クローンで解消される）。
+  - ※ この手順を経ることで GitHub の SSH ホスト鍵が `~/.ssh/known_hosts` に登録される。これが無い状態で サブモジュールの取得や `chezmoi apply`（`.chezmoiexternal.toml` の Vault/Memory clone を含む）が自動実行されると、初回接続の鍵確認プロンプトに応答できず失敗しうる（playbook 側でも `known_hosts` タスクとして担保しているが、根本はこの手動クローンで解消される）。
 - Xcode Command Line Tools がインストール済みであること（`xcode-select -p` で確認）。未導入の場合、`ansible_python_interpreter` が指す `/usr/bin/python3` の初回起動時に GUI のインストールダイアログが出る。これは ansible の gather_facts より前に起きるため、自動化では検知・応答できない。無ければ `xcode-select --install` を先に実行しておく。
 - Python インタプリタがインストールされていること（[Ansible のインストール](#1-ansible-のインストール)で必要。上記 Xcode Command Line Tools を導入すれば通常はこれも揃う）。
 
@@ -302,10 +323,13 @@ pipx install ansible                 # フル版（playbook が使う community.
 ### 2. 環境の準備
 
 ```sh
-# リポジトリクローン
-git clone --recurse-submodules git@github.com:argondev22/environment.git
-cd environment/pc
+# サブモジュール（homedir = chezmoi のソース）ごと clone する。playbook の前にこれを行うのが確実
+git clone --recurse-submodules git@github.com:argondev22/environment.git ~/Environment
+cd ~/Environment/pc
 ```
+
+※ playbook は `homedir` が未取得なら `git submodule update --init homedir` を試みるが、GitHub への SSH 認証が要る。
+※ playbook は homedir を main に載せて fast-forward で最新化する（未コミットの変更・未 push があればスキップして表示）。chezmoi のソースは `~/Environment/homedir`（`~/.config/chezmoi/chezmoi.toml` の `sourceDir`）。旧 `~/.local/share/chezmoi` は playbook では消さない。
 
 ### 3. `.vault_pass`ファイルの配置
 
@@ -336,6 +360,7 @@ source ~/.zprofile
 
 # 各ツールの確認
 chezmoi status          # homedir状態
+chezmoi source-path     # ~/Environment/homedir を指すこと
 asdf current            # インストール済みパッケージ/ツール
 echo $SHELL             # デフォルトシェル
 age-keygen -y ~/.config/age/age.key  # age公開鍵

@@ -13,6 +13,14 @@ if ! command -v chezmoi >/dev/null 2>&1; then
   echo "chezmoi: NG (chezmoi コマンドが見つかりません)"
   status=1
 else
+  expected_source="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/homedir"
+  actual_source="$(chezmoi source-path 2>/dev/null || true)"
+  if [ "$actual_source" = "$expected_source" ]; then
+    echo "chezmoi source: OK ($actual_source)"
+  else
+    echo "chezmoi source: NG (期待: $expected_source, 実際: ${actual_source:-不明})"
+    status=1
+  fi
   chezmoi_diff="$(chezmoi status 2>&1)"
   if [ -z "$chezmoi_diff" ]; then
     echo "chezmoi: OK (clean)"

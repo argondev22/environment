@@ -6,7 +6,11 @@
       chezmoi_config: "{{ ansible_env.HOME }}/.config/chezmoi"
       age_config: "{{ ansible_env.HOME }}/.config/age"
       age_key: "{{ ansible_env.HOME }}/.config/age/age.key"
-      chezmoi_source: "{{ ansible_env.HOME }}/.local/share/chezmoi"
+      # Environment リポジトリ（このファイルの親ディレクトリ）と、そのサブモジュール homedir（= chezmoi のソース）
+      environment: "{{ playbook_dir | dirname }}"
+      chezmoi_source: "{{ playbook_dir | dirname }}/homedir"
+      # 旧 chezmoi ソース。playbook は触らない（Summary で残っていることを表示するだけ）
+      chezmoi_source_legacy: "{{ ansible_env.HOME }}/.local/share/chezmoi"
       zshrc: "{{ ansible_env.HOME }}/.zshrc"
       tool_versions: "{{ ansible_env.HOME }}/.tool-versions"
       brewfile: "{{ ansible_env.HOME }}/.Brewfile"
@@ -101,7 +105,7 @@
             state: directory
             mode: '0700'
 
-        # chezmoi init と、.chezmoiexternal.toml の git-repo (Vault/Memory) は
+        # homedir サブモジュールの取得と、.chezmoiexternal.toml の git-repo は
         # SSH (git@github.com:...) を使う。github.com の鍵が known_hosts に
         # 無いと初回接続で TOFU 確認("yes/no")が入るが、command モジュール経由
         # では stdin が繋がらず応答できず失敗する。事前に信頼しておくことで
@@ -142,25 +146,73 @@
           vars:
             age_public_key: "{{ age_keygen_result.stdout.strip() }}"
             age_key_file: "{{ paths.age_key }}"
+            chezmoi_source: "{{ paths.chezmoi_source }}"
             brew_bin: "{{ brew.bin }}"
             brew_prefix: "{{ brew.prefix }}"
             asdf_dir: "{{ brew.prefix }}/opt/asdf/libexec"
             asdf_sh: "{{ brew.prefix }}/opt/asdf/libexec/asdf.sh"
 
-        - name: Check existing chezmoi repository
+        # chezmoi のソースは Environment のサブモジュール homedir（chezmoi.toml の sourceDir）。
+        # 新 PC では Environment を --recurse-submodules で clone しておくのが確実
+        # （ここでの init には GitHub への SSH 認証が要る）。
+        - name: Check homedir submodule
           stat:
-            path: "{{ paths.chezmoi_source }}"
-          register: repo_exists
+            path: "{{ paths.chezmoi_source }}/.git"
+          register: homedir_git
 
-        - name: Initialize chezmoi repository
-          command: "{{ brew.bin }}/chezmoi init {{ chezmoi_repo_url }}"
-          when: not repo_exists.stat.exists
+        # 初期化済みの homedir に対して `git submodule update` は使わない
+        # （記録されたコミットに戻して detached HEAD にしてしまうため）。
+        - name: Initialize homedir submodule
+          command: "git -C {{ paths.environment }} submodule update --init homedir"
+          when: not homedir_git.stat.exists
 
-        - name: Update chezmoi repository
-          command: "git -C {{ paths.chezmoi_source }} pull"
-          register: git_pull
-          changed_when: "'Already up to date.' not in git_pull.stdout"
-          when: repo_exists.stat.exists
+        # homedir を main に載せて ff-only で最新化する（冪等）。
+        # 未コミットの変更・未 push のコミット・履歴の分岐があれば何も変えずスキップし、
+        # メッセージを出す（失敗にはしない）。
+        - name: Update homedir (main, fast-forward only)
+          shell: |
+            set -eu
+            cd "{{ paths.chezmoi_source }}"
+            if [ -n "$(git status --porcelain)" ]; then
+              echo "SKIP: homedir に未コミットの変更があるため更新しませんでした"
+              exit 0
+            fi
+            git fetch -q origin main
+            cur="$(git symbolic-ref -q --short HEAD || true)"
+            if [ "$cur" != main ]; then
+              if ! git merge-base --is-ancestor HEAD origin/main; then
+                echo "SKIP: homedir の HEAD に origin/main へ含まれないコミットがあるため更新しませんでした"
+                exit 0
+              fi
+              git switch -q main 2>/dev/null || git switch -q -c main --track origin/main
+              echo "CHANGED: homedir を main に切り替えました"
+            fi
+            counts="$(git rev-list --left-right --count main...origin/main)"
+            ahead="${counts%%[[:space:]]*}"
+            behind="${counts##*[[:space:]]}"
+            if [ "$ahead" -gt 0 ]; then
+              echo "SKIP: homedir に未 push のコミットがあるため更新しませんでした"
+              exit 0
+            fi
+            if [ "$behind" -gt 0 ]; then
+              git merge -q --ff-only origin/main
+              echo "CHANGED: homedir を origin/main に更新しました"
+            fi
+          args:
+            executable: /bin/bash
+          register: homedir_update
+          changed_when: "'CHANGED' in homedir_update.stdout"
+
+        - name: Report homedir update result
+          debug:
+            msg: "{{ homedir_update.stdout_lines }}"
+          when: homedir_update.stdout is defined and homedir_update.stdout | length > 0
+
+        - name: Require homedir source for chezmoi
+          stat:
+            path: "{{ paths.chezmoi_source }}/.git"
+          register: homedir_ready
+          failed_when: not ansible_check_mode and not homedir_ready.stat.exists
 
         - name: Apply homedir
           command: "{{ brew.bin }}/chezmoi apply"
@@ -296,6 +348,11 @@
           changed_when: false
           failed_when: false
 
+        - name: Check legacy chezmoi source
+          stat:
+            path: "{{ paths.chezmoi_source_legacy }}"
+          register: sum_legacy_source
+
         - name: Collect asdf current versions
           shell: '. "{{ asdf_sh }}" && asdf current'
           args:
@@ -313,8 +370,10 @@
               - "Homebrew      : {{ 'OK' if sum_brew.rc == 0 else 'FAILED' }} ({{ brew.bin }})"
               - "Default shell : {{ brew.zsh }}"
               - "Brewfile      : {{ 'applied' if brewfile_check.stat.exists else 'not found (skipped)' }}"
+              - "Homedir source: {{ paths.chezmoi_source }}"
               - "Homedir       : {{ 'clean' if (sum_chezmoi.stdout | default('')) == '' else 'PENDING CHANGES ↓' }}"
               - "{{ sum_chezmoi.stdout_lines | default([]) }}"
+              - "{{ ('旧 chezmoi ソース ' ~ paths.chezmoi_source_legacy ~ ' が残っています（未 push の変更が無いことを確認して削除してください。playbook は消しません）') if sum_legacy_source.stat.exists else '旧 chezmoi ソース: なし' }}"
               - "asdf tools    :"
               - "{{ sum_asdf.stdout_lines | default(['(.tool-versions not found)']) }}"
               - "======================================================"
