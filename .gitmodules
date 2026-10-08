@@ -1,6 +1,8 @@
 [submodule "homedir"]
 	path = homedir
 	url = git@github.com:argondev22/homedir.git
+	branch = main
 [submodule "agent-plugins"]
 	path = agent-plugins
 	url = git@github.com:argondev22/agent-plugins.git
+	branch = main

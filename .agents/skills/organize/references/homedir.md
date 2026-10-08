@@ -2,6 +2,9 @@
 
 ## 前提
 
+- 編集先は `~/Environment/homedir`（Environment のサブモジュール = chezmoi のソース。`chezmoi source-path` で確認できる）。この中で直接編集・commit・push する。作業の前後に `scripts/sync-submodules.sh` を実行する（SKILL.md 第5・6節）。実 clone は使わない。
+- 作業前に `~/Environment/homedir` の `README.md` と `AGENTS.md`（あれば）を読む。
+
 - `~/.agents/` がエージェント共通の正。`~/.agents/AGENTS.md`（グローバル指示）と `~/.agents/skills/`（スキル）。
 - 各エージェントはそれを参照する。Claude は `dot_claude/CLAUDE.md` の `@~/.agents/AGENTS.md`、Codex は `dot_codex/symlink_AGENTS.md.tmpl`。
 - 汎用スキルは homedir ではなく agent-plugins（マーケットプレイス名 `my-plugins`）に置く。homedir に置くのは個人 PC 依存のものだけ。
@@ -59,8 +62,8 @@ Claude と Codex の両方を揃える（Codex 非対応のマーケットプレ
   python3 -m json.tool dot_claude/settings.json
   python3 -c 'import tomllib,sys; tomllib.load(open(sys.argv[1],"rb"))' dot_codex/config.toml
   ```
-- chezmoi があればスクラッチに展開して確認する：`--source <homedir> --destination <scratch>/home --config <scratch>/chezmoi.toml --cache <scratch>/cache --exclude externals,encrypted`。`~` には書き込まない。
+- chezmoi があればスクラッチに展開して確認する：`--source ~/Environment/homedir --destination <scratch>/home --config <scratch>/chezmoi.toml --cache <scratch>/cache --exclude externals,encrypted`。`~` には書き込まない。
 
 ## git
 
-main で作業しブランチを切らない。コミットは Conventional Commits・日本語。push はオペレーターが行うことがある。
+`~/Environment/homedir` の中で main のまま作業し、ブランチは切らない。コミットは Conventional Commits・日本語。push はオペレーターが確認のうえ行う（自動承認されないときは、オペレーターが `cd ~/Environment/homedir && git push` を実行する）。push 後は `scripts/sync-submodules.sh` で Environment にポインタをコミットする。
