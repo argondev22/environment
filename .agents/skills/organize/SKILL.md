@@ -35,6 +35,15 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 
 迷ったとき（汎用か個人 PC 依存か、など）は推測せずオペレーターに確認する。
 
+### 他人のスキル・プラグイン
+
+他人が管理するものは自分のリポジトリに取り込まず、入れ方だけを管理する。
+
+- **探す順番**: まずプラグイン（マーケットプレイス）として配布されていないかを確認し、あればそちらを使う（有効化だけで済み、更新も自動で入る）。無ければ `skills.sh`（npx skills）で入れる。
+- **外すとき**: プラグインなら homedir の登録・有効化を消す。npx skills なら `skills.sh` の該当行を消し、オペレーターの端末で `npx skills remove -g -a claude-code -a codex <name>` を実行してもらう。
+- **更新**: npx skills で入れたものは、オペレーターの端末で `npx skills update -g` を実行してもらう。
+- **書き換えたくなったとき**: そのまま使うのをやめ、fork して自作として agent-plugins に入れる（元の入れ方は外す）。
+
 ## 3. homedir の作業
 
 具体的な手順は `references/homedir.md` を読む。

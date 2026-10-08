@@ -15,7 +15,7 @@
 
 set -e
 
-# https://www.skills.sh/mattpocock/skills
+# https://www.skills.sh/vercel-labs/skills/find-skills
 npx skills add vercel-labs/skills --skill find-skills -g -a claude-code -a codex
 
 # https://www.skills.sh/mattpocock/skills/grill-me
