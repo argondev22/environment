@@ -14,8 +14,6 @@ user = "{{ ansible_user_id }}"
 brew_bin = "{{ brew_bin }}"
 brew_prefix = "{{ brew_prefix }}"
 age_key_file = "{{ age_key_file }}"
-asdf_dir = "{{ asdf_dir }}"
-asdf_sh = "{{ asdf_sh }}"
 is_darwin = {{ (ansible_facts.os_family == "Darwin") | lower }}
 is_linux = {{ (ansible_facts.os_family != "Darwin") | lower }}
 {% if ansible_facts.os_family == "Darwin" %}

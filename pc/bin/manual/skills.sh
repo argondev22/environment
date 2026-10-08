@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 # AI エージェント用スキルを npx skills でインストールする
 #   参考: https://github.com/vercel-labs/skills
-#   前提: node / npm が使えること（.tool-versions の nodejs）
+#   前提: node / npm が使えること（mise の node）
 #
 # 注意: 意図的に -y を付けず確認プロンプトを出す（対話的に内容を確認したい）。
 #       npx の確認プロンプトに答える必要があるため、必ずこのスクリプトを

@@ -15,7 +15,7 @@
 
 - **[Ansible](https://www.ansible.com/)**: 構成管理（初期構築・全体リコンサイル）
 - **[Homebrew](https://brew.sh/)**: パッケージ管理
-- **[asdf](https://asdf-vm.com/)**: 各ツールおよびバージョンを統一管理
+- **[mise](https://mise.jdx.dev/)**: プロジェクトごとにバージョンを変えたい開発ツールの管理
 - **[chezmoi](https://www.chezmoi.io/)**: dotfile の管理
 - **[zsh](https://www.zsh.org/)**: デフォルトシェル
 - **[age](https://age-encryption.org/)**: 機密性の高い dotfiles を暗号化して安全に管理
@@ -44,8 +44,10 @@
 
 #### パッケージ/ツール
 
-1. 原則 asdf で管理
-2. asdf で管理できないパッケージ/ツールは homebrew で管理
+1. 日常的にグローバルで使うツール（CLI・アプリ）は Homebrew で管理（`dot_Brewfile`）
+2. プロジェクトごとにバージョンを変えたい開発ツールは mise で管理
+   - グローバル既定は homedir の `dot_config/mise/config.toml`（`~/.config/mise/config.toml`）
+   - プロジェクト固有のバージョンは、各リポジトリの `mise.toml`（または `.tool-versions`）で上書きする
 3. 上記で対応できない場合は、[`bin/`](bin/) にカスタムのインストールスクリプトを作成
    - `bin/` 直下: playbook が自動実行する。**冪等かつ非対話**が前提（確認プロンプトを出すコマンドを置かない）。
    - `bin/manual/`: 対話確認が必要なスクリプトはここに置く。playbook からは実行されず、オペレーターが自分の端末で直接実行する（`bootstrap` スキルが実行タイミングを案内する）。
@@ -57,9 +59,11 @@
 └── ansible
 
 brew
-├── asdf
-|	└── .tool-versions # 1. 原則ここで管理
-└── ... # 2. asdf が対応していないパッケージは brew で管理
+├── zsh / chezmoi / age   # コア（基盤。playbook が先に入れる）
+├── mise
+│   ├── ~/.config/mise/config.toml # 2. グローバル既定の開発ツール
+│   └── <各リポジトリ>/mise.toml   #    プロジェクト固有のバージョン
+└── ... # 1. 日常的にグローバルで使うツール（Brewfile）
 
 (カスタムスクリプト) # 3. 上記で対応できない場合は、カスタムスクリプトを作成
 ```
@@ -72,11 +76,23 @@ brew
 
 `playbook.yml` は **新しいマシンの初期構築** と、**実機を宣言状態へ揃え直す全体リコンサイル**（任意）に使う。冪等なのでいつ実行しても安全。
 
-一方、**日々のパッケージ/dotfiles の追加・変更に playbook は不要**。各ツール（chezmoi / asdf / Homebrew）のネイティブコマンドで完結する（下記「運用フロー」）。
+一方、**日々のパッケージ/dotfiles の追加・変更に playbook は不要**。各ツール（chezmoi / mise / Homebrew）のネイティブコマンドで完結する（下記「運用フロー」）。
+
+playbook のタスク順:
+
+1. Homebrew 本体
+2. コアパッケージ（基盤。chezmoi・age・zsh。Homebrew で入れる）
+3. zsh の設定（`/etc/shells` 登録・既定シェル化）
+4. chezmoi（homedir サブモジュールの用意、age 鍵の配置、`chezmoi.toml` の生成、`chezmoi apply`）
+5. `brew bundle`（`~/.Brewfile`。日常ツールと mise 本体が入る）
+6. `mise install`（`~/.config/mise/config.toml` のグローバル既定ツール）
+7. `bin/` のカスタムスクリプト
+
+コアパッケージは playbook が直接入れる基盤で、日常的に触る Brewfile には書かない。
 
 ### 運用フロー
 
-いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles/asdf/Brewfile は chezmoi のソース（Environment のサブモジュール `~/Environment/homedir/`。chezmoi の `sourceDir` がここを指す）を「唯一の真実」とし、`~/` 配下は直接編集しない。ソースの変更は `~/Environment/homedir` の中で commit・push し、そのあと Environment 側のポインタを更新する（下記「サブモジュールの作業」）。
+いずれも共通の型で行う：**① chezmoi ソースを編集して適用 → ②（必要なら）実機へインストール → ③ push → ④ 他マシンへ同期**。dotfiles / mise の設定 / Brewfile は chezmoi のソース（Environment のサブモジュール `~/Environment/homedir/`。chezmoi の `sourceDir` がここを指す）を「唯一の真実」とし、`~/` 配下は直接編集しない。ソースの変更は `~/Environment/homedir` の中で commit・push し、そのあと Environment 側のポインタを更新する（下記「サブモジュールの作業」）。
 
 #### homedir（chezmoi）
 
@@ -116,21 +132,22 @@ brew
 
 未コミットの変更・未 push のコミット・履歴の分岐があるサブモジュールは、何も変えずに報告して終了コード 1 で終わる。
 
-#### asdf
+#### mise
 
-1. `.tool-versions` を編集して適用する
+プロジェクト固有のバージョンは、各リポジトリの `mise.toml`（または `.tool-versions`）に書く。以下はグローバル既定（全リポジトリ共通の既定バージョン）の追加手順。
+
+1. `dot_config/mise/config.toml` を編集して適用する
 
    ```sh
-   chezmoi edit --apply .tool-versions # 例: terraform 1.10.3 を追記
+   chezmoi edit --apply ~/.config/mise/config.toml # 例: [tools] に terraform = "1.10.3" を追記
    ```
 
-   ※ 直接 `~/.tool-versions` を編集しないこと
+   ※ 直接 `~/.config/mise/config.toml` を編集しないこと（`mise use -g` も使わない）
 
 2. 実機にインストールする
 
    ```sh
-   asdf plugin add terraform # 新規プラグインのときだけ
-   asdf install              # .tool-versions を読んで入れる
+   mise install # ~/.config/mise/config.toml を読んで入れる
    ```
 
 3. push する
@@ -147,7 +164,7 @@ brew
    # push 後、~/Environment で .agents/skills/organize/scripts/sync-submodules.sh
    # 他のマシンでは ~/Environment で git pull → sync-submodules.sh → chezmoi apply
    chezmoi apply
-   asdf install # 新規プラグインがあれば asdf plugin add も
+   mise install
    ```
 
 #### Homebrew
@@ -248,21 +265,24 @@ ansible-playbook -i inventory.ini playbook.yml --check --diff --ask-vault-pass -
 ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass --ask-become-pass
 ```
 
-### asdf
+### mise
 
 ```sh
-# プラグインを追加
-asdf plugin add terraform
+# グローバル既定（~/.config/mise/config.toml）のツールをインストール
+mise install
 
-# ツールをインストール（.tool-versions を読む）
-asdf install
+# 未インストールのツールを確認
+mise ls --missing
+
+# 現在有効なツールとバージョン
+mise ls --current
 ```
 
 ### chezmoi
 
 ```sh
 # 新しい dotfiles を追加
-chezmoi add ~/.tool-versions
+chezmoi add ~/.your-dotfile
 
 # 機密性の高い dotfiles を追加
 chezmoi add --encrypt ~/.aws/credentials
@@ -356,12 +376,13 @@ ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
 
 ```sh
 # 環境の読み込み
-source ~/.zprofile
+source ~/.zshrc
 
 # 各ツールの確認
 chezmoi status          # homedir状態
 chezmoi source-path     # ~/Environment/homedir を指すこと
-asdf current            # インストール済みパッケージ/ツール
+mise ls --current       # 有効な開発ツール（グローバル既定）
+mise ls --missing       # 未インストールが無いこと（出力なしが正常）
 echo $SHELL             # デフォルトシェル
 age-keygen -y ~/.config/age/age.key  # age公開鍵
 ```

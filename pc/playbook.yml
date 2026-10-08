@@ -10,7 +10,7 @@
       environment: "{{ playbook_dir | dirname }}"
       chezmoi_source: "{{ playbook_dir | dirname }}/homedir"
       zshrc: "{{ ansible_env.HOME }}/.zshrc"
-      tool_versions: "{{ ansible_env.HOME }}/.tool-versions"
+      mise_config: "{{ ansible_env.HOME }}/.config/mise/config.toml"
       brewfile: "{{ ansible_env.HOME }}/.Brewfile"
 
   pre_tasks:
@@ -28,16 +28,9 @@
       vars:
         brew_prefix: "{{ '/opt/homebrew' if ansible_facts.machine == 'arm64' else '/usr/local' }}"
 
-    - name: Set asdf configuration
-      set_fact:
-        asdf_sh: "{{ brew.prefix }}/opt/asdf/libexec/asdf.sh"
-        asdf_env:
-          ASDF_DIR: "{{ brew.prefix }}/opt/asdf/libexec"
-          PATH: "{{ ansible_env.PATH }}:{{ brew.prefix }}/opt/asdf/shims:{{ brew.prefix }}/opt/asdf/bin"
-
   tasks:
     # ---------------------------------------------------------------
-    # Homebrew + コアパッケージ
+    # Homebrew + コアパッケージ（基盤: zsh・chezmoi・age。日常ツールは Brewfile、開発ツールは mise）
     # ---------------------------------------------------------------
     - name: Setup Homebrew and core packages
       block:
@@ -55,14 +48,9 @@
             HOME: "{{ paths.home }}"
             USER: "{{ ansible_user_id }}"
 
-        - name: Install core dependencies
-          community.general.homebrew:
-            name: [unzip, gnupg]
-            state: present
-
         - name: Install core packages
           community.general.homebrew:
-            name: [zsh, chezmoi, age, asdf]
+            name: [zsh, chezmoi, age]
             state: present
 
     # ---------------------------------------------------------------
@@ -147,8 +135,6 @@
             chezmoi_source: "{{ paths.chezmoi_source }}"
             brew_bin: "{{ brew.bin }}"
             brew_prefix: "{{ brew.prefix }}"
-            asdf_dir: "{{ brew.prefix }}/opt/asdf/libexec"
-            asdf_sh: "{{ brew.prefix }}/opt/asdf/libexec/asdf.sh"
 
         # chezmoi のソースは Environment のサブモジュール homedir（chezmoi.toml の sourceDir）。
         # 新 PC では Environment を --recurse-submodules で clone しておくのが確実
@@ -218,69 +204,6 @@
           changed_when: false
           no_log: true
 
-        - name: Create asdf compatibility symlink
-          file:
-            src: "{{ brew.prefix }}/opt/asdf"
-            dest: "{{ paths.home }}/.asdf"
-            state: link
-            force: true
-
-    # ---------------------------------------------------------------
-    # 言語ツール (.tool-versions を asdf に委譲)
-    # ---------------------------------------------------------------
-    - name: Check .tool-versions exists
-      stat:
-        path: "{{ paths.tool_versions }}"
-      register: tool_versions_file
-
-    - name: Install tools from .tool-versions (asdf)
-      when: tool_versions_file.stat.exists
-      environment: "{{ asdf_env }}"
-      block:
-        - name: Read .tool-versions
-          slurp:
-            src: "{{ paths.tool_versions }}"
-          register: tool_versions_raw
-
-        - name: Extract asdf plugin names
-          set_fact:
-            asdf_plugins: >-
-              {{
-                (tool_versions_raw.content | b64decode).splitlines()
-                | map('trim') | reject('match', '^(#|$)')
-                | map('regex_replace', '\s.*$', '') | list
-              }}
-
-        - name: Add asdf plugins
-          shell: '. "{{ asdf_sh }}" && asdf plugin add {{ item }}'
-          args:
-            executable: /bin/bash
-          loop: "{{ asdf_plugins }}"
-          changed_when: false
-          failed_when: false
-
-        - name: Import nodejs release-team keyring
-          shell: '. "{{ asdf_sh }}" && bash ~/.asdf/plugins/nodejs/bin/import-release-team-keyring'
-          args:
-            executable: /bin/bash
-          when: "'nodejs' in asdf_plugins"
-          changed_when: false
-          failed_when: false
-
-        - name: Install tools (asdf reads .tool-versions itself)
-          shell: '. "{{ asdf_sh }}" && cd "{{ paths.home }}" && asdf install'
-          args:
-            executable: /bin/bash
-          register: asdf_install
-          changed_when: "'Downloading' in asdf_install.stdout or 'Installing' in asdf_install.stdout"
-          failed_when: false
-
-        - name: Reshim asdf
-          shell: '. "{{ asdf_sh }}" && asdf reshim'
-          args:
-            executable: /bin/bash
-          changed_when: false
-
     # ---------------------------------------------------------------
     # Homebrew パッケージ (Brewfile = 宣言的な唯一の真実)
     # ---------------------------------------------------------------
@@ -294,6 +217,41 @@
       register: brew_bundle
       changed_when: "'Installing' in brew_bundle.stdout or 'Upgrading' in brew_bundle.stdout"
       when: brewfile_check.stat.exists
+
+    # ---------------------------------------------------------------
+    # 開発ツール (~/.config/mise/config.toml を mise に委譲)
+    # mise 本体は Brewfile で入る。グローバル既定のツールだけをここで入れる
+    # ---------------------------------------------------------------
+    - name: Check mise installation
+      stat:
+        path: "{{ brew.bin }}/mise"
+      register: mise_bin
+
+    - name: Check mise global config exists
+      stat:
+        path: "{{ paths.mise_config }}"
+      register: mise_config_file
+
+    - name: Install tools from mise global config
+      when: mise_bin.stat.exists and mise_config_file.stat.exists
+      environment:
+        HOME: "{{ paths.home }}"
+        PATH: "{{ brew.bin }}:{{ ansible_env.PATH }}"
+      block:
+        - name: Find missing mise tools
+          command: "{{ brew.bin }}/mise ls --missing"
+          args:
+            chdir: "{{ paths.home }}"
+          register: mise_missing
+          changed_when: false
+
+        - name: Install missing mise tools
+          command: "{{ brew.bin }}/mise install"
+          args:
+            chdir: "{{ paths.home }}"
+          register: mise_install
+          changed_when: true
+          when: mise_missing.stdout | default('') | trim | length > 0
 
     # ---------------------------------------------------------------
     # 宣言化しづらいものは bin/*.sh に委譲（各スクリプトが冪等前提・非対話前提）
@@ -346,15 +304,17 @@
           changed_when: false
           failed_when: false
 
-        - name: Collect asdf current versions
-          shell: '. "{{ asdf_sh }}" && asdf current'
+        - name: Collect mise current versions
+          command: "{{ brew.bin }}/mise ls --current"
           args:
-            executable: /bin/bash
-          environment: "{{ asdf_env }}"
-          register: sum_asdf
+            chdir: "{{ paths.home }}"
+          environment:
+            HOME: "{{ paths.home }}"
+            PATH: "{{ brew.bin }}:{{ ansible_env.PATH }}"
+          register: sum_mise
           changed_when: false
           failed_when: false
-          when: tool_versions_file.stat.exists
+          when: mise_bin.stat.exists and mise_config_file.stat.exists
 
         - name: Show summary
           debug:
@@ -366,7 +326,7 @@
               - "Homedir source: {{ paths.chezmoi_source }}"
               - "Homedir       : {{ 'clean' if (sum_chezmoi.stdout | default('')) == '' else 'PENDING CHANGES ↓' }}"
               - "{{ sum_chezmoi.stdout_lines | default([]) }}"
-              - "asdf tools    :"
-              - "{{ sum_asdf.stdout_lines | default(['(.tool-versions not found)']) }}"
+              - "mise tools    :"
+              - "{{ sum_mise.stdout_lines | default(['(mise or ~/.config/mise/config.toml not found)']) }}"
               - "======================================================"
               - "詳細な変更/失敗は上の PLAY RECAP と各タスク結果を参照"
