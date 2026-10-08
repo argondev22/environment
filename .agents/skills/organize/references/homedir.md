@@ -2,7 +2,7 @@
 
 ## 前提
 
-- 編集先は `~/Environment/homedir`（Environment のサブモジュール = chezmoi のソース。`chezmoi source-path` で確認できる）。この中で直接編集・commit・push する。作業の前後に `scripts/sync-submodules.sh` を実行する（SKILL.md 第5・6節）。実 clone は使わない。
+- 編集先は `~/Environment/homedir`（Environment のサブモジュール = chezmoi のソース。`chezmoi source-path` で確認できる）。この中で直接編集・commit・push する。作業の前後に `scripts/sync-submodules.sh` を実行する（SKILL.md 第5・6節）。
 - 作業前に `~/Environment/homedir` の `README.md` と `AGENTS.md`（あれば）を読む。
 
 - `~/.agents/` がエージェント共通の正。`~/.agents/AGENTS.md`（グローバル指示）と `~/.agents/skills/`（スキル）。

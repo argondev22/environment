@@ -17,7 +17,7 @@ environment/
 
 ## サブモジュール
 
-`homedir/` と `agent-plugins/` はサブモジュールだが、実 clone は使わず **この中で直接作業する**（編集・commit・push も `~/Environment/homedir` などの中で行う）。chezmoi のソースは `~/Environment/homedir`。
+`homedir/` と `agent-plugins/` はサブモジュールで、**この中で直接作業する**（編集・commit・push も `~/Environment/homedir` などの中で行う）。chezmoi のソースは `~/Environment/homedir`。
 
 サブモジュールの操作は `.agents/skills/organize/scripts/sync-submodules.sh` に任せる。作業の前（main に載せて最新化）と後（Environment にポインタをコミット）の両方で同じコマンドを実行する。詳しくは `organize` スキルを参照。
 

@@ -108,7 +108,7 @@ brew
 
 #### サブモジュールの作業
 
-`homedir/`（chezmoi のソース）と `agent-plugins/` は Environment のサブモジュールだが、**この中で直接作業する**（実 clone は不要）。git のサブモジュール操作はスクリプトに任せる。
+`homedir/`（chezmoi のソース）と `agent-plugins/` は Environment のサブモジュールだが、**この中で直接作業する**。git のサブモジュール操作はスクリプトに任せる。
 
 1. 作業前: `.agents/skills/organize/scripts/sync-submodules.sh`（未初期化なら init し、main に載せて最新化する）
 2. サブモジュールの中で編集・commit（main のまま。ブランチは切らない）・push
@@ -225,7 +225,7 @@ brew
 ```sh
 # すべて ~/Environment/pc/ で実行
 
-# 暗号化した変数ファイルを編集（例: chezmoi_repo_url を変更）
+# 暗号化した変数ファイルを編集
 ansible-vault edit group_vars/all.yml
 
 # 暗号化ファイルの中身を閲覧（編集しない）
@@ -329,7 +329,7 @@ cd ~/Environment/pc
 ```
 
 ※ playbook は `homedir` が未取得なら `git submodule update --init homedir` を試みるが、GitHub への SSH 認証が要る。
-※ playbook は homedir を main に載せて fast-forward で最新化する（未コミットの変更・未 push があればスキップして表示）。chezmoi のソースは `~/Environment/homedir`（`~/.config/chezmoi/chezmoi.toml` の `sourceDir`）。旧 `~/.local/share/chezmoi` は playbook では消さない。
+※ playbook は homedir を main に載せて fast-forward で最新化する（未コミットの変更・未 push があればスキップして表示）。chezmoi のソースは `~/Environment/homedir`（`~/.config/chezmoi/chezmoi.toml` の `sourceDir`）。
 
 ### 3. `.vault_pass`ファイルの配置
 

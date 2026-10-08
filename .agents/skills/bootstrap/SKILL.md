@@ -37,7 +37,7 @@ Ansible の `command`/`shell` タスクも、エージェントのシェル実�
     echo "your-vault-pass" > pc/.vault_pass
     ```
 
-- homedir サブモジュール: `test -e homedir/.git`。無ければ、Environment を `git clone --recurse-submodules` し直すか、オペレーターの端末で `git submodule update --init homedir` を実行するよう案内する（playbook も init を試みるが GitHub への SSH 認証が要る）。chezmoi のソースは `~/Environment/homedir`（旧 `~/.local/share/chezmoi` ではない）。
+- homedir サブモジュール: `test -e homedir/.git`。無ければ、Environment を `git clone --recurse-submodules` し直すか、オペレーターの端末で `git submodule update --init homedir` を実行するよう案内する（playbook も init を試みるが GitHub への SSH 認証が要る）。chezmoi のソースは `~/Environment/homedir`。
 
 いずれかが欠けている場合はここで止め、以降のタスクは実行しない。
 

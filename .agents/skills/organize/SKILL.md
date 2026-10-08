@@ -15,7 +15,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 | homedir（argondev22/homedir） | chezmoi のソース。`~` 配下のドットファイル・エージェント設定の正 | `~/Environment/homedir`（サブモジュール = chezmoi のソース。`chezmoi source-path` で確認できる） |
 | agent-plugins（argondev22/agent-plugins） | 自作の汎用スキル・プラグイン（どの環境でも使えるもの） | `~/Environment/agent-plugins`（サブモジュール） |
 
-**`homedir/` と `agent-plugins/` は Environment のサブモジュールだが、その中で直接作業する**（編集・commit・push もサブモジュールの中で行う）。実 clone（`~/Source/…`）は使わない。サブモジュールの git 操作は `scripts/sync-submodules.sh` が面倒を見る（第6節）。
+**`homedir/` と `agent-plugins/` は Environment のサブモジュールだが、その中で直接作業する**（編集・commit・push もサブモジュールの中で行う）。サブモジュールの git 操作は `scripts/sync-submodules.sh` が面倒を見る（第6節）。
 
 実際の `~` 配下（`~/.claude`, `~/.codex`, `~/.agents` など）は chezmoi の展開結果なので、直接書き換えない。
 
@@ -67,14 +67,3 @@ Environment 自体の変更も、main のままコミット・push する（push
   - 履歴の分岐（手元と origin の両方に別のコミット）: 手元のコミットを見せ、取り込み方（rebase・merge など）を確認する。
   - origin/main に含まれないコミット（どのブランチにも無い）: 中止される。コミットの内容を見せ、どのブランチに残すか（または破棄してよいか）を確認する。
 - 報告は git 用語を避けて平易にする。何がどのコミットに上がったか、どんな変更が入ったか（スクリプトの出力にある一行ログから要約する）。
-
-## 7. 移行手順（個人 PC で一度だけ）
-
-「chezmoi のソースを切り替えたい」と言われたら実行する。chezmoi のソースを旧 `~/.local/share/chezmoi` から `~/Environment/homedir`（サブモジュール）に切り替える。実際の `~` 配下や設定ファイルを変えるので、各ステップはオペレーターに確認しながら進める。
-
-1. `~/Environment` を `git pull` し、`scripts/sync-submodules.sh` を実行する（homedir が main に載り、最新になる）。
-2. `~/.config/chezmoi/chezmoi.toml` に `sourceDir`（`~/Environment/homedir` の絶対パス）が入っているか確認する。無ければ、playbook を再実行するか、`sourceDir = "<絶対パス>"` の行を先頭（テーブルより前）に足す。どちらにするかはオペレーターに確認する。
-3. `chezmoi source-path` が `~/Environment/homedir` を指すことを確認する。
-4. `chezmoi diff` が空（または想定内の差分）であることを、オペレーターと一緒に確認する。
-5. 旧 `~/.local/share/chezmoi` に未 push の変更（未コミットの変更・push していないコミット）が無いことを確認する（`git -C ~/.local/share/chezmoi status` と `git -C ~/.local/share/chezmoi log --oneline @{u}..`）。無ければ、削除をオペレーターに提案する（勝手に消さない）。
-6. 不要になった `~/Source/homedir`・`~/Source/agent-plugins` の clone も、同様に未コミット・未 push が無いことを確認してから、削除をオペレーターに提案する。

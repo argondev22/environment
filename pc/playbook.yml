@@ -9,8 +9,6 @@
       # Environment リポジトリ（このファイルの親ディレクトリ）と、そのサブモジュール homedir（= chezmoi のソース）
       environment: "{{ playbook_dir | dirname }}"
       chezmoi_source: "{{ playbook_dir | dirname }}/homedir"
-      # 旧 chezmoi ソース。playbook は触らない（Summary で残っていることを表示するだけ）
-      chezmoi_source_legacy: "{{ ansible_env.HOME }}/.local/share/chezmoi"
       zshrc: "{{ ansible_env.HOME }}/.zshrc"
       tool_versions: "{{ ansible_env.HOME }}/.tool-versions"
       brewfile: "{{ ansible_env.HOME }}/.Brewfile"
@@ -348,11 +346,6 @@
           changed_when: false
           failed_when: false
 
-        - name: Check legacy chezmoi source
-          stat:
-            path: "{{ paths.chezmoi_source_legacy }}"
-          register: sum_legacy_source
-
         - name: Collect asdf current versions
           shell: '. "{{ asdf_sh }}" && asdf current'
           args:
@@ -373,7 +366,6 @@
               - "Homedir source: {{ paths.chezmoi_source }}"
               - "Homedir       : {{ 'clean' if (sum_chezmoi.stdout | default('')) == '' else 'PENDING CHANGES ↓' }}"
               - "{{ sum_chezmoi.stdout_lines | default([]) }}"
-              - "{{ ('旧 chezmoi ソース ' ~ paths.chezmoi_source_legacy ~ ' が残っています（未 push の変更が無いことを確認して削除してください。playbook は消しません）') if sum_legacy_source.stat.exists else '旧 chezmoi ソース: なし' }}"
               - "asdf tools    :"
               - "{{ sum_asdf.stdout_lines | default(['(.tool-versions not found)']) }}"
               - "======================================================"
