@@ -23,7 +23,7 @@
 | `inventory.ini`・`group_vars/all.yml` | 対象ホストと変数（`all.yml` は Ansible Vault で暗号化） |
 | `templates/` | 生成するファイルの雛形 |
 | `bin/` | 直下の `*.sh` を playbook が自動実行する（冪等・非対話） |
-| `bin/manual/` | 対話が必要なスクリプト。オペレーターが自分の端末で実行する |
+| `bin/manual/` | 対話が必要なスクリプト。オペレータが自分の端末で実行する |
 | `Makefile` | `make syntax` / `check` / `apply` / `debug` / `clean` |
 
 ## playbook のタスク順

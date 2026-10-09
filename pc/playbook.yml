@@ -259,7 +259,7 @@
     # 対話確認が必要なスクリプト（例: npx の確認プロンプトに答えたいもの）は
     # bin/manual/ に置く。Ansible の command/shell タスクは stdin が繋がらず
     # 対話プロンプトに答えられないため、bin/ 直下（非再帰探索）には置かない。
-    # bin/manual/ 配下はこの playbook からは実行せず、オペレーターが自分の
+    # bin/manual/ 配下はこの playbook からは実行せず、オペレータが自分の
     # 端末で直接実行する（bootstrap スキルが案内する）。
     # ---------------------------------------------------------------
     - name: Run custom install scripts (bin/*.sh)
