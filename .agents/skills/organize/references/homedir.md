@@ -7,6 +7,7 @@
 
 - `~/.agents/` がエージェント共通の正。`~/.agents/AGENTS.md`（グローバル指示）と `~/.agents/skills/`（スキル）。
 - 各エージェントはそれを参照する。Claude は `dot_claude/CLAUDE.md` の `@~/.agents/AGENTS.md`、Codex は `dot_codex/symlink_AGENTS.md.tmpl`。
+- グローバル指示（`dot_agents/AGENTS.md`）から参照してよいプラグインのスキルは core だけ。core は常に有効な中核なので組み込んでよいが、core 以外のプラグインはプロジェクトごとに有効・無効が変わるため、その説明やスキルをグローバル指示に書かない（そのプラグインが無い環境で壊れた指示になる）。
 - 汎用スキルは homedir ではなく agent-plugins（マーケットプレイス名 `my-plugins`）に置く。homedir に置くのは個人 PC 依存のものだけ。
 - 他人のスキル（SKILL.md だけのリポジトリ）は取り込まない。Environment の `pc/bin/manual/skills.sh`（npx skills）の担当。
 - 秘密情報（トークン等）は書かない。ホームのパスは `{{ .chezmoi.homeDir }}` か `~` で表す。
