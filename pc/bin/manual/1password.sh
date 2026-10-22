@@ -7,6 +7,5 @@
 #       そのためオペレータ自身の端末で直接実行すること。playbook から
 #       は実行しない（bin/ ではなく bin/manual/ に置いているのはそのため）。
 
-op plugin init aws
 op plugin init claude
 op plugin init opencode
