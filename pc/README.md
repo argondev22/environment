@@ -56,7 +56,7 @@ make apply   # 本実行
 | 設定 | スクリプト |
 |---|---|
 | スクリーンショットの保存先（クリップボード）、スペース2回のピリオド無効化、ダークモード、F1〜F12 を標準のファンクションキーにする、右下のホットコーナー（クイックメモ）無効化、Dock（左配置・サイズ・最近使った項目を非表示） | `bin/macos.sh` |
-| CapsLock を Control にする（ログイン時に再適用する LaunchAgent つき） | `bin/capslock.sh` |
+| CapsLock を Control にする（ログイン時に再適用する LaunchAgent の plist は `homedir` が配置し、スクリプトは即時反映と登録を行う） | `bin/capslock.sh` |
 
 ## 手動で行う初期設定
 
