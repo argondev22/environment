@@ -109,6 +109,16 @@ exit code が非0、または出力末尾の「総合判定: NG」があれば�
 >
 > （`find` の実行結果に基づいて列挙する。`pc/bin/manual/` の中身は増減するので、決め打ちにせず毎回動的に確認する）
 
+## オペレーターが実行して、出力を貼ってもらう流れ
+
+sudo や vault のパスワードが要る実行は、エージェントから進められない。その場合は、オペレーターの端末で実行してもらい、出力を貼ってもらって、診断する。
+
+1. 実行するコマンドを案内する。`pc/` で `make check`（dry-run）、問題なければ `make apply`。いずれも、パスワードの入力はオペレーターが行う。
+2. 出力を貼ってもらう。秘密情報（鍵、パスワード）が含まれていれば、その場で指摘する。
+3. 止まった・失敗した場合は、`references/troubleshooting.md` で症状を探す。該当しなければ、貼られた出力から原因を探し、確認できていないことは推測と明記する。
+4. 直したら、再実行を案内する。
+5. 通ったら、第5節の事後確認（`verify.sh`）に進む。
+
 ## 補足（pc/ の Makefile と vault）
 
 - `pc/Makefile`（`pc/` で実行。いずれも `--ask-become-pass` 付きで、このスキルからは使えない。オペレーターの端末用）: `make syntax`（構文チェック）、`make check`（dry-run）、`make apply`（本実行）、`make debug`（`-vvv` の dry-run）、`make clean`（`.vault_pass` を削除）。playbook を修正するときは、いきなり `make apply` せず `make check` で確認する（`check` と `apply` で挙動が変わるタスクもある）。
