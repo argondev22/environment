@@ -198,11 +198,13 @@
           register: homedir_ready
           failed_when: not ansible_check_mode and not homedir_ready.stat.exists
 
+        # 対話の確認で止まらないよう --no-tty を付け、止まった場合も async で打ち切って理由を見せる
         - name: Apply homedir
-          command: "{{ brew.bin }}/chezmoi apply"
+          command: "{{ brew.bin }}/chezmoi apply --no-tty"
           register: chezmoi_apply
           changed_when: false
-          no_log: true
+          async: 300
+          poll: 5
 
     # ---------------------------------------------------------------
     # Homebrew パッケージ (Brewfile = 宣言的な唯一の真実)
