@@ -11,7 +11,7 @@
 - 汎用スキルは homedir ではなく agent-plugins（マーケットプレイス名 `my-plugins`）に置く。homedir に置くのは個人 PC 依存のものだけ。
 - 他人のスキル（SKILL.md だけのリポジトリ）は取り込まない。Environment の `pc/bin/manual/skills.sh`（npx skills）の担当。
 - 秘密情報（トークン等）は書かない。ホームのパスは `{{ .chezmoi.homeDir }}` か `~` で表す。
-- `dot_codex/config.toml` は通常ファイルとして全体を管理する（modify テンプレートではない）。
+- `dot_codex/modify_private_config.toml` の `$managed` に管理する設定を書く。modify テンプレートで既存の TOML に上書きマージし、Codex が追加した他の項目を保持する。権限は `600`。TOML のコメントや整形は保持しない。
 - ソース直下の `.` 始まり（`.chezmoi*` 以外）は展開されない。人向けファイル（README.md 等）は `.chezmoiignore` に入れる。
 - README は短く保つ。
 
@@ -22,17 +22,18 @@
 Claude と Codex の両方を揃える（Codex 非対応のマーケットプレイスは Claude のみ）。
 
 - `dot_claude/settings.json` の `enabledPlugins` に `"<plugin>@<marketplace>": true`
-- `dot_codex/config.toml` に `[plugins."<plugin>@<marketplace>"]` と `enabled = true`
+- `dot_codex/modify_private_config.toml` の `$managed` に `[plugins."<plugin>@<marketplace>"]` と `enabled = true`
 
 ### 外部マーケットプレイスを追加する
 
 - Claude: `dot_claude/settings.json` の `extraKnownMarketplaces` に `<name>: { source: { source: "github", repo: "<owner>/<repo>" }, autoUpdate: true }`
-- Codex: `dot_codex/config.toml` に `[marketplaces.<name>]`、`source_type = "git"`、`source = "https://github.com/<owner>/<repo>.git"`（非公開リポジトリは認証が通らないため SSH の `git@github.com:<owner>/<repo>.git` にする）
+- Codex: `dot_codex/modify_private_config.toml` の `$managed` に `[marketplaces.<name>]`、`source_type = "git"`、`source = "https://github.com/<owner>/<repo>.git"`（非公開リポジトリは認証が通らないため SSH の `git@github.com:<owner>/<repo>.git` にする）
 - Codex は新しい PC で初回に `codex plugin marketplace upgrade` が必要（オペレーターに案内する）。
 
 ### プラグインを無効化・削除する
 
 有効化・登録の記述を Claude と Codex の両方から消す。
+Codex の既存項目を無効化する場合は `enabled = false` を管理設定に書く。管理設定から消すだけでは実機の項目は削除されない。
 
 ### 個人スキルを追加する
 
@@ -69,7 +70,7 @@ Claude と Codex の両方を揃える（Codex 非対応のマーケットプレ
 
   ```sh
   python3 -m json.tool dot_claude/settings.json
-  python3 -c 'import tomllib,sys; tomllib.load(open(sys.argv[1],"rb"))' dot_codex/config.toml
+  chezmoi cat ~/.codex/config.toml | python3 -c 'import tomllib,sys; tomllib.loads(sys.stdin.read())'
   ```
 
 - chezmoi があればスクラッチに展開して確認する：`--source ~/Environment/homedir --destination <scratch>/home --config <scratch>/chezmoi.toml --cache <scratch>/cache --exclude externals,encrypted`。`~` には書き込まない。
