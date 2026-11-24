@@ -34,7 +34,7 @@ agent-plugins の README と AGENTS.md の規約に従い、次を揃える。
 
 ## 4. Environment
 
-`pc/bin/manual/skills.sh` の各行に `-a <名前>` を追加する。実行はオペレーターの端末で。
+`pc/bin/skills.sh` の `install_args` に `-a <名前>` を追加し、導入済みの判定もそのエージェントの参照先に合わせる。
 
 ## 5. 動作確認
 

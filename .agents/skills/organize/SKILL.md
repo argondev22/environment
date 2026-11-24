@@ -11,7 +11,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 
 | リポジトリ | 役割 | 編集する場所 |
 |---|---|---|
-| Environment（argondev22/environment） | PC 構築の入口。Ansible playbook（`pc/`）で Homebrew / mise / chezmoi / zsh / age を入れ、chezmoi で homedir を展開する。外部スキルの導入（`pc/bin/manual/skills.sh`）も持つ | このリポジトリ（`~/Environment`） |
+| Environment（argondev22/environment） | PC 構築の入口。Ansible playbook（`pc/`）で Homebrew / mise / chezmoi / zsh / age を入れ、chezmoi で homedir を展開する。外部スキルの導入（`pc/bin/skills.sh`）も持つ | このリポジトリ（`~/Environment`） |
 | homedir（argondev22/homedir） | chezmoi のソース。`~` 配下のドットファイル・エージェント設定の正 | `~/Environment/homedir`（サブモジュール = chezmoi のソース。`chezmoi source-path` で確認できる） |
 | agent-plugins（argondev22/agent-plugins） | 自作の汎用スキル・プラグイン（どの環境でも使えるもの） | `~/Environment/agent-plugins`（サブモジュール） |
 
@@ -27,7 +27,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 | プロジェクトごとにバージョンを変えたい開発ツール | グローバル既定は homedir の `dot_config/mise/config.toml`、プロジェクト固有はそのリポジトリの `mise.toml` |
 | Homebrew に無いツール（npm・pipx・cargo・GitHub Releases などで配布） | homedir の `dot_config/mise/config.toml` に mise のバックエンドで書く（例: `"npm:<pkg>" = "<version>"`。`npm install -g` などは使わない） |
 | 上記のどれでも入らないツール（インストールスクリプトでしか入らない等） | Environment の `pc/bin/`。直下の `*.sh` は playbook が bash で自動実行する（**冪等・非対話**が前提。shebang は `#!/usr/bin/env bash`）。対話が必要なものは `pc/bin/manual/`（playbook は実行しない。オペレーターが自分の端末で実行。zsh でもよい） |
-| 他人のスキル（SKILL.md だけのリポジトリ） | Environment の `pc/bin/manual/skills.sh` に `npx skills add <repo> --skill <name> -g -a claude-code -a codex` を追記。**実行はオペレーター自身の端末で** |
+| 他人のスキル（SKILL.md だけのリポジトリ） | Environment の `pc/bin/skills.sh` に `install_skill <repo> <name>` を追記。playbook が未導入分を入れる |
 | 他人のプラグイン（マーケットプレイスとして配布） | homedir で登録・有効化（`references/homedir.md`） |
 | 自作スキル・プラグインで、どの環境でも使える | agent-plugins |
 | 自作スキルで、個人 PC に依存する | homedir の `dot_agents/skills/` |
@@ -43,7 +43,7 @@ description: PC 環境（Environment・homedir・agent-plugins の3リポジト�
 他人が管理するものは自分のリポジトリに取り込まず、入れ方だけを管理する。
 
 - **探す順番**: まずプラグイン（マーケットプレイス）として配布されていないかを確認し、あればそちらを使う（有効化だけで済み、更新も自動で入る）。無ければ `skills.sh`（npx skills）で入れる。
-- **外すとき**: プラグインなら homedir の登録・有効化を消す。npx skills なら `skills.sh` の該当行を消し、オペレーターの端末で `npx skills remove -g -a claude-code -a codex <name>` を実行してもらう。
+- **外すとき**: プラグインなら homedir の登録・有効化を消す。npx skills なら `skills.sh` の該当行を消し、オペレーターの端末で `npx skills remove -g <name>`（導入先は `skills.sh` を参照） を実行してもらう。
 - **更新**: npx skills で入れたものは、オペレーターの端末で `npx skills update -g` を実行してもらう。
 - **書き換えたくなったとき**: そのまま使うのをやめ、fork して自作として agent-plugins に入れる（元の入れ方は外す）。
 

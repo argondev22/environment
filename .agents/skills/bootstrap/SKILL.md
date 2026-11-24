@@ -20,7 +20,7 @@ Ansible の `command`/`shell` タスクも、エージェントのシェル実�
 
 - **`pc/.vault_pass`(ansible-vault のパスワード)**: 値をチャットで受け取ったり、こちらから書き込んだりしない。存在確認のみ行う。
 - **sudo (become) パスワード**: `--ask-become-pass` のプロンプトには答えられない。`sudo -n true` で自動実行可否を判定するだけに留める。
-- **`pc/bin/manual/` 配下のスクリプト**: 対話確認をあえて残したいスクリプト（例: `skills.sh` の `npx skills add` 確認プロンプト）はここに置かれ、playbook からは実行されない(`pc/playbook.yml` の `Discover custom scripts` タスクは `pc/bin/` 直下のみを非再帰で見る設計)。このスキルはここを自動実行せず、オペレーター自身の端末での手動実行を案内する。
+- **`pc/bin/manual/` 配下のスクリプト**: 対話確認をあえて残したいスクリプトはここに置かれ、playbook からは実行されない(`pc/playbook.yml` の `Discover custom scripts` タスクは `pc/bin/` 直下のみを非再帰で見る設計)。このスキルはここを自動実行せず、オペレーター自身の端末での手動実行を案内する。
 
 ## playbook のタスク順
 
@@ -104,7 +104,6 @@ exit code が非0、または出力末尾の「総合判定: NG」があれば�
 
 > 以下は対話確認ありで実行したい工程のため自動実行の対象外です。自分の端末で直接実行してください:
 >
-> - `pc/bin/manual/skills.sh`
 > - `pc/bin/manual/1password.sh`
 >
 > （`find` の実行結果に基づいて列挙する。`pc/bin/manual/` の中身は増減するので、決め打ちにせず毎回動的に確認する）

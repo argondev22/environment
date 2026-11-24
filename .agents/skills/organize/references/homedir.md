@@ -9,7 +9,7 @@
 - 各エージェントはそれを参照する。Claude は `dot_claude/CLAUDE.md` の `@~/.agents/AGENTS.md`、Codex は `dot_codex/symlink_AGENTS.md.tmpl`。
 - グローバル指示（`dot_agents/AGENTS.md`）から参照してよいプラグインのスキルは core だけ。core は常に有効な中核なので組み込んでよいが、core 以外のプラグインはプロジェクトごとに有効・無効が変わるため、その説明やスキルをグローバル指示に書かない（そのプラグインが無い環境で壊れた指示になる）。
 - 汎用スキルは homedir ではなく agent-plugins（マーケットプレイス名 `my-plugins`）に置く。homedir に置くのは個人 PC 依存のものだけ。
-- 他人のスキル（SKILL.md だけのリポジトリ）は取り込まない。Environment の `pc/bin/manual/skills.sh`（npx skills）の担当。
+- 他人のスキル（SKILL.md だけのリポジトリ）は取り込まない。Environment の `pc/bin/skills.sh`（npx skills）の担当。
 - 秘密情報（トークン等）は書かない。ホームのパスは `{{ .chezmoi.homeDir }}` か `~` で表す。
 - `dot_codex/modify_private_config.toml` の `$managed` に管理する設定を書く。modify テンプレートで既存の TOML に上書きマージし、Codex が追加した他の項目を保持する。権限は `600`。TOML のコメントや整形は保持しない。
 - ソース直下の `.` 始まり（`.chezmoi*` 以外）は展開されない。人向けファイル（README.md 等）は `.chezmoiignore` に入れる。
